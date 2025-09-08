@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<!-- 
+  Patched by Gemini.
+  Version: 0.31
+  Fixes:
+  1.  **1D Element Selection:** Reworked raycasting logic to reliably detect and
+      select all 1D elements (CBAR, CBEAM, CBUSH, RBE2, RBE3).
+  2.  **Element Editing:** Implemented the "Apply Edit" functionality for the
+      element edit panel. Changes to PID and node connectivity are now saved
+      and integrated with the Undo/Redo history.
+  3.  **MOMENT Card Support:** Added full support for MOMENT loads, including
+      UI for creation, parsing/export, visualization (double-headed arrows),
+      and interaction (selection, editing, deletion).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebMesh Editor</title>
+  <style>
+    :root {
+      --bg: #0f1115; --panel: #141821; --text: #e6e8ee; --muted: #9aa3b2; --accent: #5aa9ff; --danger: #ff6b6b; --ok: #4ad295; --border: #1f2430;
+    }
+    html, body { 
+      height: 100%; 
+      margin: 0; 
+      background: var(--bg); 
+      color: var(--text); 
+      font: 14px/1.4 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow: hidden; /* Prevent body from scrolling */
+    }
+    #app { 
+      display: grid; 
+      grid-template-columns: 320px 1fr; 
+      grid-template-rows: auto 1fr; 
+      height: 100vh; /* Use viewport height */
+    }
+    header { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: #10131a; }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    header .spacer { flex: 1; }
+    header .btn { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+    header .btn:hover { border-color: #2b3242; }
+    header .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #sidebar { 
+      background: var(--panel); 
+      border-right: 1px solid var(--border); 
+      padding: 12px; 
+      overflow-y: auto; /* Explicitly set vertical scroll */
+      grid-row: 2;
+    }
+    #sidebar h2 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; margin: 16px 0 8px; color: var(--muted); }
+    .card { background: #0f1320; border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .row label { width: 86px; color: var(--muted); }
+    input[type="text"], input[type="number"], select { width: 100%; background: #0d111a; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+    input[type="file"] { width: 100%; }
+    button { background: #1a2130; color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+    button:hover { border-color: #2b3242; }
+    #viewport { 
+      position: relative; 
+      grid-row: 2;
+      overflow: hidden; /* Prevent viewport from causing scroll */
+    }
+    #canvas { width: 100%; height: 100%; display: block; }
+    #dropzone { position: absolute; inset: 0; border: 2px dashed #2b3242; border-radius: 16px; display: none; align-items: center; justify-content: center; color: var(--muted); background: rgba(20, 24, 33, 0.6); pointer-events: none; }
+    #status { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; color: var(--muted); white-space: pre-wrap; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; background: #0c1220; border: 1px solid var(--border); color: var(--muted); font-size: 12px; margin-right: 6px; }
+    .danger { color: var(--danger); }
+    .ok { color: var(--ok); }
+    .counts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .counts .card { text-align: center; }
+    .counts .card h3 { margin: 4px 0 2px; font-size: 18px; }
+    .counts .card p { margin: 0; color: var(--muted); font-size: 12px; }
+    /* This class is now used by the add-on label renderer */
+    .label { font-size: 11px; line-height: 1; padding: 2px 6px; background: rgba(0,0,0,0.55); border: 1px solid var(--border); border-radius: 6px; color: var(--text); pointer-events: none; }
+    .label.muted { opacity: 0.8; }
+    /* Model tree styles */
+    #modelTreeContainer ul { list-style: none; padding-left: 12px; margin: 0; }
+    #modelTreeContainer li { cursor: pointer; user-select: none; position: relative; }
+    #modelTreeContainer li ul { display: none; }
+    #modelTreeContainer li.open > ul { display: block; }
+    #modelTreeContainer li::before { content: '►'; display: inline-block; width: 1em; color: var(--muted); }
+    #modelTreeContainer li.open::before { content: '▼'; }
+    /* Selection rectangle overlay */
+    #selectRect { position: absolute; border: 1px dashed var(--accent); background: rgba(90,169,255,0.15); pointer-events: none; display: none; z-index: 10; }
+    /* Context menu */
+    #contextMenu { position: fixed; z-index: 20; background: #0d111a; border: 1px solid var(--border); border-radius: 6px; padding: 4px 0; display: none; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+    #contextMenu div { padding: 4px 12px; cursor: pointer; white-space: nowrap; }
+    #contextMenu div:hover { background: #1a2130; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>WebMesh Editor</h1>
+      <span class="pill">Rotate: LMB</span>
+      <span class="pill">Pan: RMB</span>
+      <span class="pill">Zoom: Wheel</span>
+      <span class="pill">Pick Node: Click</span>
+      <span class="pill">Box Select: Alt+Drag</span>
+      <div class="spacer"></div>
+      <button class="btn" id="btnUndo" disabled>Undo</button>
+      <button class="btn" id="btnRedo" disabled>Redo</button>
+      <button class="btn" id="btnReset">Reset View</button>
+      <button class="btn" id="btnExport">Export .dat</button>
+    </header>
+
+    <aside id="sidebar">
+      <h2>File</h2>
+      <div class="card">
+        <div class="row"><input id="file" type="file" accept=".dat,.bdf" /></div>
+        <div class="row" style="justify-content: space-between">
+          <button id="btnSample">Load sample</button>
+          <button id="btnClear">Clear</button>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <small class="muted">You can also drag & drop a .dat/.bdf anywhere</small>
+        </div>
+      </div>
+
+      <h2>Model Info</h2>
+      <div class="card">
+        <div id="modelTreeContainer"></div>
+      </div>
+
+      <h2>Display Settings</h2>
+      <div class="card">
+        <div class="row"><label>Symbol Size</label><input id="symbolSize" type="number" step="0.1" value="1.0"></div>
+        <div class="row"><label>Spring Size</label><input id="springSize" type="number" step="0.1" value="1.0"></div>
+      </div>
+
+      <h2>Labels</h2>
+      <div class="card">
+        <div class="row"><label>Node IDs</label><input id="showNodeIds" type="checkbox"></div>
+        <div class="row"><label>Element IDs</label><input id="showElemIds" type="checkbox"></div>
+        <div class="row"><label>SPC DOF</label><input id="showSPCLabels" type="checkbox"></div>
+        <div class="row"><label>Load Labels</label><input id="showLoadLabels" type="checkbox"></div>
+        <div class="row"><label>Load Mode</label>
+          <select id="loadLabelMode">
+            <option value="resultant" selected>Resultant</option>
+            <option value="components">Components</option>
+          </select>
+        </div>
+        <div class="row"><label>Color Mode</label>
+          <select id="colorMode">
+            <option value="default" selected>Default</option>
+            <option value="property">Property</option>
+          </select>
+        </div>
+      </div>
+
+      <h2>Selection</h2>
+      <div class="card">
+        <div class="row" style="justify-content: space-between">
+          <span id="selCount">None</span>
+          <button id="btnClearSelection">Clear Selection</button>
+        </div>
+        <div class="row">
+          <label>Select Mode</label>
+          <select id="selectMode">
+            <option value="node" selected>Nodes</option>
+            <option value="element">Elements</option>
+            <option value="load">Loads</option>
+            <option value="constraint">Constraints</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Multi Select</label>
+          <input id="multiSelect" type="checkbox">
+        </div>
+        <div id="singleSelectContainer">
+          <div class="row"><label>Node ID</label><input id="selNid" type="text" placeholder="—" disabled></div>
+          <div class="row"><label>X</label><input id="selX" type="number" step="any"></div>
+          <div class="row"><label>Y</label><input id="selY" type="number" step="any"></div>
+          <div class="row"><label>Z</label><input id="selZ" type="number" step="any"></div>
+          <div class="row" style="justify-content: space-between">
+            <button id="btnApplyMove">Apply Move</button>
+            <button id="btnCancelMove">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="editElementCard" style="display: none;">
+        <h2>Edit Element</h2>
+        <div class="card">
+          <div class="row"><label>EID</label><input id="editEid" type="number" disabled></div>
+          <div class="row"><label>PID</label><input id="editPid" type="number"></div>
+          <div class="row edit-elem-nodes"><label>Node 1</label><input id="editN1" type="number"></div>
+          <div class="row edit-elem-nodes"><label>Node 2</label><input id="editN2" type="number"></div>
+          <div class="row edit-elem-nodes"><label>Node 3</label><input id="editN3" type="number"></div>
+          <div class="row edit-elem-nodes"><label>Node 4</label><input id="editN4" type="number"></div>
+          <div class="row" style="justify-content: space-between">
+            <button id="btnApplyElemEdit">Apply Edit</button>
+            <button id="btnCancelElemEdit">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <h2>Add Node</h2>
+      <div class="card">
+        <div class="row"><label>NID</label><input id="newNid" type="number" placeholder="Auto"></div>
+        <div class="row"><label>X</label><input id="newX" type="number" step="any" value="0"></div>
+        <div class="row"><label>Y</label><input id="newY" type="number" step="any" value="0"></div>
+        <div class="row"><label>Z</label><input id="newZ" type="number" step="any" value="0"></div>
+        <div class="row"><button id="btnAddNode">Add Node</button></div>
+      </div>
+
+      <h2>Add Element</h2>
+      <div class="card" id="addElementCard">
+        <div class="row"><label>Type</label>
+          <select id="elemType">
+            <option value="cquad4" selected>CQUAD4</option>
+            <option value="ctria3">CTRIA3</option>
+            <option value="cbar">CBAR</option>
+            <option value="cbeam">CBEAM</option>
+            <option value="cbush">CBUSH</option>
+            <option value="rbe2">RBE2</option>
+            <option value="rbe3">RBE3</option>
+          </select>
+        </div>
+        <div class="row"><label>EID</label><input id="elemEid" type="number" value="10"></div>
+        <div class="row"><label>PID</label><input id="elemPid" type="number" value="1"></div>
+        <div class="row elem-nodes"><label id="elemN1Label">Node 1</label><input id="elemN1" type="number" placeholder="Use selected"></div>
+        <div class="row elem-nodes"><label>Node 2</label><input id="elemN2" type="number"></div>
+        <div class="row elem-nodes"><label>Node 3</label><input id="elemN3" type="number"></div>
+        <div class="row elem-nodes"><label>Node 4</label><input id="elemN4" type="number"></div>
+        <div class="row" id="elemCmRow" style="display:none;"><label>CM</label><input id="elemCm" type="text" value="123456"></div>
+        <div class="row" id="elemDepNodesRow" style="display:none;"><label>Deps</label><input id="elemDepNodes" type="text" placeholder="Multi-select or CSV"></div>
+        <div class="row" id="elemIndNodesRow" style="display:none;"><label>Indeps</label><input id="elemIndNodes" type="text" placeholder="Multi-select or CSV"></div>
+        <div class="row"><button id="btnAddElement">Add Element</button></div>
+      </div>
+
+
+      <h2>Add Load / Constraint</h2>
+      <div class="card">
+        <div class="row"><label>Node ID(s)</label><input id="loadNodeId" type="text" placeholder="Selected or CSV"></div>
+        <div class="row"><label>SID</label><input id="sid" type="number" value="1"></div>
+        <div class="row"><label>FORCE</label><input id="fMag" type="number" step="any" value="1000"></div>
+        <div class="row"><label>Dir X</label><input id="fX" type="number" step="any" value="1"></div>
+        <div class="row"><label>Dir Y</label><input id="fY" type="number" step="any" value="0"></div>
+        <div class="row"><label>Dir Z</label><input id="fZ" type="number" step="any" value="0"></div>
+        <div class="row"><button id="btnAddForce">Add FORCE</button></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
+        <div class="row"><label>MOMENT</label><input id="mMag" type="number" step="any" value="500"></div>
+        <div class="row"><label>Dir X</label><input id="mX" type="number" step="any" value="0"></div>
+        <div class="row"><label>Dir Y</label><input id="mY" type="number" step="any" value="1"></div>
+        <div class="row"><label>Dir Z</label><input id="mZ" type="number" step="any" value="0"></div>
+        <div class="row"><button id="btnAddMoment">Add MOMENT</button></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
+        <div class="row"><label>SPC1</label><input id="spcComp" type="text" value="123"></div>
+        <div class="row"><button id="btnAddSPC">Add SPC1</button></div>
+      </div>
+
+      <h2>Status</h2>
+      <div class="card" id="status">Drop a .dat/.bdf file to begin…</div>
+    </aside>
+
+    <section id="viewport">
+      <canvas id="canvas"></canvas>
+      <div id="selectRect"></div>
+      <div id="dropzone">Drop .dat/.bdf to load</div>
+      <!-- Mini reference compass for global orientation -->
+      <div id="compass" style="position:absolute; bottom:10px; left:10px; width:80px; height:80px; pointer-events:none;"></div>
+    </section>
+    <div id="contextMenu"></div>
+  </div>
+
+  <!-- Three.js import map + modules -->
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS2DRenderer.js';
+
+    // ---------------- Model ----------------
+    const model = {
+      nodes: new Map(), // nid -> {x,y,z} in THREE.js coordinates
+      nodeIndex: new Map(), // nid -> idx
+      indexToNid: [], // idx -> nid
+      elems: { tri: [], quad: [], bar: [], beam: [], bush: [], rbe2: [], rbe3: [] },
+      loads: { force: [], pload: [], moment: [] }, // {sid,nid,cid,mag,dir:[x,y,z]}
+      spc1: [], // {sid,components,nodes:[nid,...]}
+      bbox: null,
+      // property and material definitions
+      properties: new Map(),
+      materials: new Map(),
+      preLines: [],
+      postLines: [],
+    };
+
+    // ---------------- Selection & coloring helpers ----------------
+    // Global selection sets for multi-selection of nodes and elements
+    const selection = { nodes: new Set(), elems: new Set() };
+    // Hidden entity sets for hide/show functionality
+    const hidden = { elems: new Set(), loads: new Set(), spc: new Set(), nodes: new Set() };
+    // Current selection mode: node, element, load, constraint
+    let selectMode = 'node';
+    // Mapping from triangle face index to element metadata (for picking elements)
+    let faceToElem = [];
+    // Mapping from line segment index to element metadata (for picking 1D elements)
+    let lineToElem = [];
+    // Highlight lines for selected element
+    let selectedElemLines = null;
+    // Points used to highlight selected nodes
+    let highlightPoints = null;
+    // Cache mapping property IDs to RGB colors
+    const propertyColorMap = new Map();
+
+    // Track which element node input is currently active for click-to-fill when
+    // creating or editing elements.
+    var currentElemInput = null;
+
+    // Box selection state: used by Alt+drag for multi-selection.
+    var dragStart = null;
+    var boxSelecting = false;
+
+    // Global multi-select mode flag.
+    var multiSelectMode = false;
+
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+      }
+      return [r, g, b];
+    }
+
+    function getPropColor(pid) {
+      if (propertyColorMap.has(pid)) return propertyColorMap.get(pid);
+      const golden = 0.618033988749895;
+      const h = (pid * golden) % 1;
+      const [r, g, b] = hslToRgb(h, 0.6, 0.55);
+      const col = [r, g, b];
+      propertyColorMap.set(pid, col);
+      return col;
+    }
+
+    function resetModel() {
+      model.nodes.clear();
+      model.nodeIndex = new Map();
+      model.indexToNid.length = 0;
+      model.elems = { tri: [], quad: [], bar: [], beam: [], bush: [], rbe2: [], rbe3: [] };
+      model.loads = { force: [], pload: [], moment: [] };
+      model.spc1 = [];
+      model.bbox = null;
+      model.properties = new Map();
+      model.materials = new Map();
+      model.preLines = [];
+    }
+
+    // --------------- Parsing ---------------
+    function parseTokens(line) {
+      if (line.includes(',')) {
+        return line.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      }
+      const toks = [];
+      for (let i = 0; i < line.length; i += 8) {
+        const seg = line.slice(i, i + 8).trim();
+        toks.push(seg);
+      }
+      return toks.filter(t => t.length > 0);
+    }
+    function parseBDF(text) {
+      resetModel();
+      const rawLines = text.split(/\r?\n/);
+      const lines = [];
+      let acc = '';
+      for (let line of rawLines) {
+        const c = line.indexOf('$');
+        if (c >= 0) line = line.slice(0, c);
+        line = line.replace(/\t/g, ' ').trim();
+        if (!line) continue;
+        if (acc) acc += line; else acc = line;
+        if (/,$/.test(acc)) { continue; } else { lines.push(acc); acc=''; }
+      }
+      if (acc) lines.push(acc);
+
+      const asNum = (s) => (s === '' || s === undefined ? NaN : Number(s));
+
+      for (const line of lines) {
+        const tokens = parseTokens(line);
+        if (!tokens.length) continue;
+        const card = tokens[0].toUpperCase();
+        try {
+          switch (card) {
+            case 'GRID': {
+              const nid = parseInt(tokens[1]);
+              let x, y, z;
+              if (tokens.length >= 6) {
+                const tx = asNum(tokens[3]);
+                const ty = asNum(tokens[4]);
+                const tz = asNum(tokens[5]);
+                if (!Number.isNaN(tx) && !Number.isNaN(ty) && !Number.isNaN(tz)) {
+                  x = tx; y = ty; z = tz;
+                }
+              }
+              if (x === undefined) {
+                outer: for (let i = 2; i + 2 < tokens.length; i++) {
+                  const px = asNum(tokens[i]);
+                  const py = asNum(tokens[i+1]);
+                  const pz = asNum(tokens[i+2]);
+                  if (!Number.isNaN(px) && !Number.isNaN(py) && !Number.isNaN(pz)) {
+                    x = px; y = py; z = pz;
+                    break outer;
+                  }
+                }
+              }
+              if (x !== undefined && y !== undefined && z !== undefined) {
+                // Store in visual coordinates, will be transformed for Three.js
+                model.nodes.set(nid, { x: x, y: y, z: z });
+              }
+              break; }
+            case 'CTRIA3': {
+              const [eid,pid,n1,n2,n3] = tokens.slice(1).map(v=>parseInt(v));
+              model.elems.tri.push({ eid, pid, n:[n1,n2,n3], type: 'CTRIA3' });
+              break; }
+            case 'CQUAD4': {
+              const eid = parseInt(tokens[1]), pid = parseInt(tokens[2]);
+              const n1 = parseInt(tokens[3]), n2 = parseInt(tokens[4]), n3 = parseInt(tokens[5]), n4 = parseInt(tokens[6]);
+              model.elems.quad.push({ eid, pid, n:[n1,n2,n3,n4], type: 'CQUAD4' });
+              break; }
+            case 'CBAR':
+            case 'CBEAM': {
+              const eid = parseInt(tokens[1]);
+              const pid = parseInt(tokens[2]);
+              const n1 = parseInt(tokens[3]);
+              const n2 = parseInt(tokens[4]);
+              const key = card === 'CBAR' ? 'bar' : 'beam';
+              model.elems[key].push({ eid, pid, n:[n1,n2], type: card });
+              break; }
+            case 'CBUSH': {
+              const eid = parseInt(tokens[1]);
+              const pid = parseInt(tokens[2]);
+              const ga = parseInt(tokens[3]);
+              const gb = parseInt(tokens[4]);
+              model.elems.bush.push({ eid, pid, n:[ga,gb], type: 'CBUSH' });
+              break; }
+            case 'RBE2': {
+              const eid = parseInt(tokens[1]);
+              const gn  = parseInt(tokens[2]);
+              const cm  = tokens[3] || '123456';
+              const deps = tokens.slice(4).map(t=>parseInt(t)).filter(v=>!isNaN(v));
+              model.elems.rbe2.push({ eid, gn, cm, deps, type: 'RBE2' });
+              break; }
+            case 'RBE3': {
+              const eid = parseInt(tokens[1]);
+              const gn  = parseInt(tokens[2]);
+              const cm  = tokens[3] || '123456';
+              const inds = tokens.slice(4).map(t=>parseInt(t)).filter(v=>!isNaN(v));
+              model.elems.rbe3.push({ eid, gn, cm, inds, type: 'RBE3' });
+              break; }
+            case 'FORCE': {
+              const sid = parseInt(tokens[1]);
+              const nid = parseInt(tokens[2]);
+              const cid = parseInt(tokens[3] || '0');
+              const mag = Number(tokens[4]);
+              const dir = [Number(tokens[5]||0), Number(tokens[6]||0), Number(tokens[7]||0)];
+              model.loads.force.push({ type: 'FORCE', sid, nid, cid, mag, dir });
+              break; }
+            case 'MOMENT': {
+              const sid = parseInt(tokens[1]);
+              const nid = parseInt(tokens[2]);
+              const cid = parseInt(tokens[3] || '0');
+              const mag = Number(tokens[4]);
+              const dir = [Number(tokens[5]||0), Number(tokens[6]||0), Number(tokens[7]||0)];
+              model.loads.moment.push({ type: 'MOMENT', sid, nid, cid, mag, dir });
+              break; }
+            case 'PLOAD': {
+              const sid = parseInt(tokens[1]);
+              // Parse the pressure value which may be encoded in a Nastran
+              // exponential format like '1.+5' (meaning 1.0e+5).  If the
+              // numeric conversion fails or the string contains a '+' exponent
+              // pattern, attempt to interpret it as base * 10^exponent.
+              let pRaw = tokens[2];
+              let pVal = Number(pRaw);
+              if ((isNaN(pVal) || !isFinite(pVal)) && typeof pRaw === 'string') {
+                const plusIndex = pRaw.indexOf('+');
+                // Accept forms like '1.+5' or '1.2+3'
+                if (plusIndex > 0) {
+                  const baseStr = pRaw.slice(0, plusIndex);
+                  const expStr = pRaw.slice(plusIndex + 1);
+                  const base = parseFloat(baseStr);
+                  const exp = parseInt(expStr);
+                  if (!isNaN(base) && !isNaN(exp)) {
+                    pVal = base * Math.pow(10, exp);
+                  }
+                }
+              }
+              // Fallback to zero if still NaN
+              if (isNaN(pVal) || !isFinite(pVal)) pVal = 0;
+              const pts = tokens.slice(3).map(t => parseInt(t)).filter(v => !isNaN(v));
+              if (pts.length >= 2) {
+                const nodes = pts.slice(0, 4);
+                while (nodes.length < 4) nodes.push(nodes[nodes.length - 1]);
+                model.loads.pload.push({ type: 'PLOAD', sid, p: pVal, nodes });
+              }
+              break; }
+            case 'SPC1': {
+              const sid = parseInt(tokens[1]);
+              const comp = tokens[2];
+              const nodes = tokens.slice(3).map(t=>parseInt(t)).filter(v=>!isNaN(v));
+              model.spc1.push({ sid, components: comp, nodes });
+              break; }
+            case 'PSHELL': {
+              const pid = parseInt(tokens[1]);
+              const mid = parseInt(tokens[2]);
+              const t = Number(tokens[3]);
+              model.properties.set(pid, { type: 'PSHELL', mid, t });
+              break; }
+            case 'PBAR':
+            case 'PBEAM': {
+              const pid = parseInt(tokens[1]);
+              const mid = parseInt(tokens[2]);
+              model.properties.set(pid, { type: card, mid });
+              break; }
+            case 'MAT1': {
+              const mid = parseInt(tokens[1]);
+              const e = Number(tokens[2]);
+              let nu = NaN;
+              if (tokens.length > 3) {
+                const val = Number(tokens[3]);
+                if (!isNaN(val)) nu = val;
+              }
+              model.materials.set(mid, { type: 'MAT1', E: e, Nu: nu });
+              break; }
+            default:
+              model.preLines.push(line);
+              break;
+          }
+        } catch (e) { console.warn('Parse warning:', card, line, e); }
+      }
+
+      const nids = Array.from(model.nodes.keys()).sort((a,b)=>a-b);
+      model.indexToNid = nids;
+      model.nodeIndex = new Map(nids.map((nid,i)=>[nid,i]));
+
+      if (nids.length) {
+        const min = new THREE.Vector3(+Infinity,+Infinity,+Infinity);
+        const max = new THREE.Vector3(-Infinity,-Infinity,-Infinity);
+        for (const nid of nids) { 
+          const n = model.nodes.get(nid);
+          const p = visualToThree(n.x, n.y, n.z);
+          min.min(p); max.max(p);
+        }
+        model.bbox = new THREE.Box3(min,max);
+      } else {
+        model.bbox = new THREE.Box3(new THREE.Vector3(-1,-1,-1), new THREE.Vector3(1,1,1));
+      }
+    }
+
+    // --------------- Export ---------------
+    function exportBDF() {
+      const pad8 = (val, alignLeft = false) => {
+        let s = val === undefined || val === null ? '' : String(val);
+        if (s.length > 8) s = s.slice(0, 8);
+        return alignLeft ? s.padEnd(8, ' ') : s.padStart(8, ' ');
+      };
+      const float8 = (v) => {
+        if (v === undefined || v === null || isNaN(v)) return '        ';
+        let s = Number(v).toExponential(4).toUpperCase();
+        s = s.replace(/\+/, '');
+        if (s.length > 8) s = Number(v).toExponential(3).toUpperCase().replace(/\+/, '');
+        if (s.length > 8) s = Number(v).toPrecision(7);
+        if (s.length > 8) s = s.slice(0, 8);
+        return s.padStart(8, ' ');
+      };
+      const lines = [];
+      if (model.preLines && model.preLines.length) {
+        for (const l of model.preLines) lines.push(l);
+      }
+      for (const nid of model.indexToNid) {
+        // When exporting, use the stored visual coordinates directly
+        const { x, y, z } = model.nodes.get(nid);
+        const card = 'GRID'.padEnd(8, ' ');
+        lines.push(card + pad8(nid) + pad8('') + float8(x) + float8(y) + float8(z));
+      }
+      for (const e of model.elems.tri) {
+        const card = 'CTRIA3'.padEnd(8, ' ');
+        lines.push(card + pad8(e.eid) + pad8(e.pid) + pad8(e.n[0]) + pad8(e.n[1]) + pad8(e.n[2]));
+      }
+      for (const e of model.elems.quad) {
+        const card = 'CQUAD4'.padEnd(8, ' ');
+        lines.push(card + pad8(e.eid) + pad8(e.pid) + pad8(e.n[0]) + pad8(e.n[1]) + pad8(e.n[2]) + pad8(e.n[3]));
+      }
+      for (const e of model.elems.bar) {
+        const card = 'CBAR'.padEnd(8, ' ');
+        lines.push(card + pad8(e.eid) + pad8(e.pid) + pad8(e.n[0]) + pad8(e.n[1]) + float8(0) + float8(0) + float8(1));
+      }
+      for (const e of model.elems.beam) {
+        const card = 'CBEAM'.padEnd(8, ' ');
+        lines.push(card + pad8(e.eid) + pad8(e.pid) + pad8(e.n[0]) + pad8(e.n[1]) + float8(0) + float8(0) + float8(1));
+      }
+      for (const e of model.elems.bush) {
+        const card = 'CBUSH'.padEnd(8, ' ');
+        lines.push(card + pad8(e.eid) + pad8(e.pid) + pad8(e.n[0]) + pad8(e.n[1]));
+      }
+      for (const e of model.elems.rbe2) {
+        const card = 'RBE2'.padEnd(8, ' ');
+        let line = card + pad8(e.eid) + pad8(e.gn) + pad8(e.cm);
+        for (const d of e.deps) line += pad8(d);
+        lines.push(line);
+      }
+      for (const e of model.elems.rbe3) {
+        const card = 'RBE3'.padEnd(8, ' ');
+        let line = card + pad8(e.eid) + pad8(e.gn) + pad8(e.cm);
+        for (const d of e.inds) line += pad8(d);
+        lines.push(line);
+      }
+      for (const f of model.loads.force) {
+        const card = 'FORCE'.padEnd(8, ' ');
+        lines.push(card + pad8(f.sid) + pad8(f.nid) + pad8(f.cid ?? 0) + float8(f.mag) + float8(f.dir[0]) + float8(f.dir[1]) + float8(f.dir[2]));
+      }
+      for (const m of model.loads.moment) {
+        const card = 'MOMENT'.padEnd(8, ' ');
+        lines.push(card + pad8(m.sid) + pad8(m.nid) + pad8(m.cid ?? 0) + float8(m.mag) + float8(m.dir[0]) + float8(m.dir[1]) + float8(m.dir[2]));
+      }
+      for (const pl of model.loads.pload) {
+        const card = 'PLOAD'.padEnd(8, ' ');
+        let line = card + pad8(pl.sid) + float8(pl.p);
+        for (const nid of pl.nodes) line += pad8(nid);
+        lines.push(line);
+      }
+      for (const s of model.spc1) {
+        if (s.nodes.length) {
+          const card = 'SPC1'.padEnd(8, ' ');
+          let line = card + pad8(s.sid) + pad8(s.components);
+          for (const nid of s.nodes) line += pad8(nid);
+          lines.push(line);
+        }
+      }
+      lines.push('ENDDATA');
+      const blob = new Blob([lines.join('\n')+'\n'], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'model_modified.dat'; a.click(); URL.revokeObjectURL(url);
+    }
+    const fmt = (v) => Number(v).toString();
+
+    // --------------- Coordinate System Transformation ---------------
+    // Visual (UI/Input): X=X, Y=Y, Z=Z (standard right-handed)
+    // Three.js Scene:    X=X, Y=Z, Z=-Y (to make Z axis point up)
+    function visualToThree(vx, vy, vz) {
+      return new THREE.Vector3(vx, vz, -vy);
+    }
+    function threeToVisual(p) {
+      return { x: p.x, y: -p.z, z: p.y };
+    }
+
+    // --------------- Three.js setup ---------------
+    const canvas = document.getElementById('canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0f1115);
+
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 10000); camera.position.set(2.5, 2.2, 2.5);
+    const controls = new OrbitControls(camera, canvas); controls.enableDamping = true;
+
+    const light = new THREE.DirectionalLight(0xffffff, 1.0); light.position.set(5, 10, 7); scene.add(light); scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+    // Helper function to create 3D text labels as sprites
+    function makeTextSprite(message, parameters) {
+        if (parameters === undefined) parameters = {};
+        const fontface = parameters.fontface || 'Arial';
+        const fontsize = parameters.fontsize || 24;
+        const borderThickness = parameters.borderThickness || 0;
+        const borderColor = parameters.borderColor || { r: 0, g: 0, b: 0, a: 1.0 };
+        const backgroundColor = parameters.backgroundColor || { r: 255, g: 255, b: 255, a: 0.0 }; // Transparent background
+        const textColor = parameters.textColor || { r: 255, g: 255, b: 255, a: 1.0 };
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = "Bold " + fontsize + "px " + fontface;
+        
+        const metrics = context.measureText(message);
+        const textWidth = metrics.width;
+        canvas.width = textWidth + borderThickness * 2;
+        canvas.height = fontsize + borderThickness * 2;
+
+        context.font = "Bold " + fontsize + "px " + fontface; // Re-set font after canvas resize
+        context.fillStyle = "rgba(" + backgroundColor.r + "," + backgroundColor.g + "," + backgroundColor.b + "," + backgroundColor.a + ")";
+        context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + "," + borderColor.b + "," + borderColor.a + ")";
+        context.lineWidth = borderThickness;
+        // context.fillRect(0, 0, canvas.width, canvas.height); // No background fill
+
+        context.fillStyle = "rgba(" + textColor.r + "," + textColor.g + "," + textColor.b + "," + textColor.a + ")";
+        context.fillText(message, borderThickness, fontsize - borderThickness);
+
+        const texture = new THREE.Texture(canvas);
+        texture.needsUpdate = true;
+
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        
+        const spriteScale = 0.15; 
+        sprite.scale.set(spriteScale * (canvas.width / fontsize), spriteScale, 1);
+        
+        return sprite;
+    }
+
+    // ----- Global axes -----
+    const axesGroup = new THREE.Group();
+    const axisMatX = new THREE.LineBasicMaterial({ color: 0xff4b4b });
+    const axisMatY = new THREE.LineBasicMaterial({ color: 0x4bff4b });
+    const axisMatZ = new THREE.LineBasicMaterial({ color: 0x4b4bff });
+    const makeAxis = (dir, mat) => {
+      const pts = [ new THREE.Vector3(0, 0, 0), visualToThree(dir.x, dir.y, dir.z) ];
+      const geom = new THREE.BufferGeometry().setFromPoints(pts);
+      return new THREE.Line(geom, mat);
+    };
+    axesGroup.add(makeAxis(new THREE.Vector3(1, 0, 0), axisMatX));
+    axesGroup.add(makeAxis(new THREE.Vector3(0, 1, 0), axisMatY));
+    axesGroup.add(makeAxis(new THREE.Vector3(0, 0, 1), axisMatZ));
+    
+    // Add sprite labels to the axes group
+    const axisLabelX = makeTextSprite("X", { fontsize: 32, textColor: { r: 255, g: 75, b: 75, a: 1.0 } });
+    axisLabelX.position.copy(visualToThree(1.1, 0, 0));
+    axesGroup.add(axisLabelX);
+
+    const axisLabelY = makeTextSprite("Y", { fontsize: 32, textColor: { r: 75, g: 255, b: 75, a: 1.0 } });
+    axisLabelY.position.copy(visualToThree(0, 1.1, 0));
+    axesGroup.add(axisLabelY);
+
+    const axisLabelZ = makeTextSprite("Z", { fontsize: 32, textColor: { r: 75, g: 75, b: 255, a: 1.0 } });
+    axisLabelZ.position.copy(visualToThree(0, 0, 1.1));
+    axesGroup.add(axisLabelZ);
+
+    scene.add(axesGroup);
+    
+    // Note: The main label renderer for model entities is still CSS2D
+    const viewportEl = document.getElementById('viewport');
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.inset = '0';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    viewportEl.appendChild(labelRenderer.domElement);
+    
+// --- Mini compass (reference axes) ---
+    const compassDiv = document.getElementById('compass');
+    let compassRenderer, compassScene, compassCamera, compassAxes; // Add compassRenderer here
+    if (compassDiv) {
+      // Create the second, dedicated renderer for the compass
+      compassRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      compassRenderer.setSize(compassDiv.clientWidth, compassDiv.clientHeight);
+      compassRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      compassDiv.appendChild(compassRenderer.domElement); // Attach it to the div
+
+      compassScene = new THREE.Scene();
+      const w = compassDiv.clientWidth;
+      const h = compassDiv.clientHeight;
+      compassCamera = new THREE.OrthographicCamera(-w/80, w/80, h/80, -h/80, 1, 100);
+      compassCamera.position.z = 2.5;
+      compassCamera.lookAt(0, 0, 0);
+      compassCamera.updateProjectionMatrix();
+
+      compassAxes = new THREE.Group();
+      const makeCompAxis = (dir, mat) => new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), visualToThree(dir.x, dir.y, dir.z)]), mat);
+      compassAxes.add(makeCompAxis(new THREE.Vector3(0.6, 0, 0), axisMatX));
+      compassAxes.add(makeCompAxis(new THREE.Vector3(0, 0.6, 0), axisMatY));
+      compassAxes.add(makeCompAxis(new THREE.Vector3(0, 0, 0.6), axisMatZ));
+      
+      const compassLabelX = makeTextSprite("X", { fontsize: 48, textColor: { r: 255, g: 75, b: 75, a: 1.0 } });
+      compassLabelX.position.copy(visualToThree(0.8, 0, 0));
+      compassAxes.add(compassLabelX);
+      
+      const compassLabelY = makeTextSprite("Y", { fontsize: 48, textColor: { r: 75, g: 255, b: 75, a: 1.0 } });
+      compassLabelY.position.copy(visualToThree(0, 0.8, 0));
+      compassAxes.add(compassLabelY);
+      
+      const compassLabelZ = makeTextSprite("Z", { fontsize: 48, textColor: { r: 75, g: 75, b: 255, a: 1.0 } });
+      compassLabelZ.position.copy(visualToThree(0, 0, 0.8));
+      compassAxes.add(compassLabelZ);
+
+      compassScene.add(compassAxes);
+    }
+    
+    let meshShell = null, meshWire = null, meshLines = null;
+    const nodeLabelGroup = new THREE.Group();
+    const elemLabelGroup = new THREE.Group();
+    const spcLabelGroup = new THREE.Group();
+    const loadLabelGroup = new THREE.Group();
+    scene.add(nodeLabelGroup, elemLabelGroup, spcLabelGroup, loadLabelGroup);
+    let points = null, selectionSphere = null;
+    const loadGroup = new THREE.Group(); const spcGroup = new THREE.Group(); scene.add(loadGroup, spcGroup);
+
+    function clearScene() {
+      for (const obj of [meshShell, meshWire, meshLines, points, selectionSphere, highlightPoints]) { if (obj) scene.remove(obj); }
+      meshShell = meshWire = meshLines = points = selectionSphere = highlightPoints = null;
+      loadGroup.clear(); spcGroup.clear(); nodeLabelGroup.clear(); elemLabelGroup.clear(); spcLabelGroup.clear(); loadLabelGroup.clear();
+    }
+
+    // Helper to create a spring geometry for CBUSH elements
+    function createSpringGeometry(p1, p2, segments, radius, numCoils) {
+        const points = [];
+        const dir = new THREE.Vector3().subVectors(p2, p1);
+        const length = dir.length();
+        dir.normalize();
+        
+        const up = new THREE.Vector3(0, 1, 0); // Using default Three.js Y-up for quaternion calculation
+        const q = new THREE.Quaternion().setFromUnitVectors(up, dir);
+
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const coilAngle = t * Math.PI * 2 * numCoils;
+            const x = radius * Math.cos(coilAngle);
+            const z = radius * Math.sin(coilAngle);
+            const y = t * length; 
+
+            // Point on the coil line, before rotation and translation
+            const point = new THREE.Vector3(x, y, z);
+            // Re-orient the point from Y-axis alignment to the spring's direction and add start point
+            point.applyQuaternion(q).add(p1);
+            points.push(point);
+        }
+
+        const curve = new THREE.CatmullRomCurve3(points);
+        return new THREE.BufferGeometry().setFromPoints(curve.getPoints(segments * numCoils));
+    }
+
+function buildGeometries(preserveView = false) {
+      let prevCamPos, prevTarget;
+      if (preserveView) {
+        prevCamPos = camera.position.clone();
+        prevTarget = controls.target.clone();
+      }
+      clearScene();
+      const N = model.indexToNid.length;
+      const pos = new Float32Array(N*3);
+      for (let i=0;i<N;i++) { 
+        const nid=model.indexToNid[i]; 
+        const n=model.nodes.get(nid);
+        const p = visualToThree(n.x, n.y, n.z);
+        pos[3*i]=p.x; pos[3*i+1]=p.y; pos[3*i+2]=p.z;
+      }
+
+      const ptsGeom = new THREE.BufferGeometry();
+      ptsGeom.setAttribute('position', new THREE.BufferAttribute(pos,3));
+      ptsGeom.computeBoundingSphere();
+      points = new THREE.Points(ptsGeom, new THREE.PointsMaterial({ size: 10, sizeAttenuation: false, color: 0x66ccff, transparent: true, opacity: 0.5 })); 
+      scene.add(points);
+
+      const hlGeom = new THREE.BufferGeometry();
+      hlGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+      highlightPoints = new THREE.Points(hlGeom, new THREE.PointsMaterial({ size: 12, sizeAttenuation: false, color: 0xffd166 }));
+      scene.add(highlightPoints);
+
+      faceToElem = [];
+      const indices = [];
+      for (const t of model.elems.tri) {
+        if (hidden.elems.has(t.eid)) continue;
+        const a = model.nodeIndex.get(t.n[0]);
+        const b = model.nodeIndex.get(t.n[1]);
+        const c = model.nodeIndex.get(t.n[2]);
+        if ([a,b,c].some(v => v === undefined)) continue;
+        indices.push(a,b,c);
+        faceToElem.push({ etype:'tri', eid: t.eid, nodes: t.n.slice() });
+      }
+      for (const q of model.elems.quad) {
+        if (hidden.elems.has(q.eid)) continue;
+        const [n1,n2,n3,n4] = q.n.map(nid => model.nodeIndex.get(nid));
+        if ([n1,n2,n3,n4].some(v => v === undefined)) continue;
+        indices.push(n1,n2,n3, n1,n3,n4);
+        faceToElem.push({ etype:'quad', eid: q.eid, nodes: q.n.slice() });
+        faceToElem.push({ etype:'quad', eid: q.eid, nodes: q.n.slice() });
+      }
+      if (indices.length) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+        g.setIndex(indices);
+        g.computeVertexNormals();
+        let usePropColors = colorMode && colorMode.value === 'property';
+        if (usePropColors) {
+          const colors = new Float32Array(N * 3);
+          for (let i = 0; i < colors.length; i += 3) {
+            colors[i] = 0.12; colors[i+1] = 0.42; colors[i+2] = 0.85;
+          }
+          for (const e of model.elems.tri) {
+            const pid = e.pid || 0;
+            const [cr, cg, cb] = getPropColor(pid);
+            for (const nid of e.n) {
+              const idx = model.nodeIndex.get(nid);
+              if (idx !== undefined) {
+                colors[3*idx] = cr; colors[3*idx+1] = cg; colors[3*idx+2] = cb;
+              }
+            }
+          }
+          for (const e of model.elems.quad) {
+            const pid = e.pid || 0;
+            const [cr, cg, cb] = getPropColor(pid);
+            for (const nid of e.n) {
+              const idx = model.nodeIndex.get(nid);
+              if (idx !== undefined) {
+                colors[3*idx] = cr; colors[3*idx+1] = cg; colors[3*idx+2] = cb;
+              }
+            }
+          }
+          g.setAttribute('color', new THREE.BufferAttribute(colors,3));
+          meshShell = new THREE.Mesh(g, new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.35 }));
+        } else {
+          meshShell = new THREE.Mesh(g, new THREE.MeshPhongMaterial({ color: 0x1f6feb, flatShading: true, transparent: true, opacity: 0.35 }));
+        }
+        scene.add(meshShell);
+        
+        const linePos = [];
+        for (const tri of model.elems.tri) {
+          const ids = tri.n.map(nid => model.nodeIndex.get(nid));
+          if (ids.some(idx => idx === undefined)) continue;
+          const [a,b,c] = ids;
+          linePos.push(pos[3*a],pos[3*a+1],pos[3*a+2], pos[3*b],pos[3*b+1],pos[3*b+2]);
+          linePos.push(pos[3*b],pos[3*b+1],pos[3*b+2], pos[3*c],pos[3*c+1],pos[3*c+2]);
+          linePos.push(pos[3*c],pos[3*c+1],pos[3*c+2], pos[3*a],pos[3*a+1],pos[3*a+2]);
+        }
+        for (const quad of model.elems.quad) {
+          const ids = quad.n.map(nid => model.nodeIndex.get(nid));
+          if (ids.some(idx => idx === undefined)) continue;
+          const [a,b,c,d] = ids;
+          linePos.push(pos[3*a],pos[3*a+1],pos[3*a+2], pos[3*b],pos[3*b+1],pos[3*b+2]);
+          linePos.push(pos[3*b],pos[3*b+1],pos[3*b+2], pos[3*c],pos[3*c+1],pos[3*c+2]);
+          linePos.push(pos[3*c],pos[3*c+1],pos[3*c+2], pos[3*d],pos[3*d+1],pos[3*d+2]);
+          linePos.push(pos[3*d],pos[3*d+1],pos[3*d+2], pos[3*a],pos[3*a+1],pos[3*a+2]);
+        }
+        if (linePos.length > 0) {
+          const wg = new THREE.BufferGeometry();
+          wg.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
+          meshWire = new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0x9aa3b2 }));
+          scene.add(meshWire);
+        }
+      }
+
+      // --- 1D Element Geometry (unified for picking) ---
+      lineToElem = [];
+      const linePos = [];
+      const lineColor = [];
+
+      const addLineSegment = (n1, n2, color, elemData) => {
+        const i0 = model.nodeIndex.get(n1);
+        const i1 = model.nodeIndex.get(n2);
+        if (i0 === undefined || i1 === undefined) return;
+        linePos.push(pos[3*i0],pos[3*i0+1],pos[3*i0+2], pos[3*i1],pos[3*i1+1],pos[3*i1+2]);
+        lineColor.push(color.r, color.g, color.b, color.r, color.g, color.b);
+        lineToElem.push(elemData);
+      };
+
+      for (const e of [...model.elems.bar, ...model.elems.beam]) {
+        if (hidden.elems.has(e.eid)) continue;
+        addLineSegment(e.n[0], e.n[1], { r: 0xe6/255, g: 0xe8/255, b: 0xee/255 }, { etype: e.type, eid: e.eid, nodes: e.n.slice() });
+      }
+
+      for (const e of model.elems.rbe2) {
+        if (hidden.elems.has(e.eid)) continue;
+        for (const depNid of e.deps) {
+          addLineSegment(e.gn, depNid, { r: 0x58/255, g: 0xa6/255, b: 0xff/255 }, { etype: 'RBE2', eid: e.eid, nodes: [e.gn, ...e.deps] });
+        }
+      }
+      for (const e of model.elems.rbe3) {
+        if (hidden.elems.has(e.eid)) continue;
+        for (const indNid of e.inds) {
+          addLineSegment(e.gn, indNid, { r: 0x58/255, g: 0xa6/255, b: 0xff/255 }, { etype: 'RBE3', eid: e.eid, nodes: [e.gn, ...e.inds] });
+        }
+      }
+
+      // CBUSH elements need special handling for spring geometry
+      const bushGroup = new THREE.Group();
+      const modelSize = model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() : 1;
+      const springSizeVal = Number(springSize.value || 1.0);
+      const baseRadius = modelSize * 0.005 * springSizeVal;
+      for (const b of model.elems.bush) {
+        if (hidden.elems.has(b.eid)) continue;
+        const i0 = model.nodeIndex.get(b.n[0]);
+        const i1 = model.nodeIndex.get(b.n[1]);
+        if (i0 === undefined || i1 === undefined) continue;
+        const p1 = new THREE.Vector3(pos[3*i0], pos[3*i0+1], pos[3*i0+2]);
+        const p2 = new THREE.Vector3(pos[3*i1], pos[3*i1+1], pos[3*i1+2]);
+        const springGeom = createSpringGeometry(p1, p2, 60, baseRadius, 5);
+        const spring = new THREE.Line(springGeom, new THREE.LineBasicMaterial({ color: 0xffa657 }));
+        // Store data for picking. We add the whole group to meshLines later.
+        spring.userData = { etype: 'CBUSH', eid: b.eid, nodes: b.n.slice() };
+        bushGroup.add(spring);
+      }
+      if(bushGroup.children.length > 0) scene.add(bushGroup);
+
+
+      if (linePos.length) {
+        const lg = new THREE.BufferGeometry();
+        lg.setAttribute('position', new THREE.Float32BufferAttribute(linePos,3));
+        lg.setAttribute('color', new THREE.Float32BufferAttribute(lineColor,3));
+        meshLines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true }));
+        scene.add(meshLines);
+      }
+
+
+      drawOverlays();
+      if (!preserveView) {
+        fitView();
+      } else {
+        camera.position.copy(prevCamPos);
+        controls.target.copy(prevTarget);
+        controls.update();
+      }
+      refreshCounts();
+      if (typeof populateModelTree === 'function') populateModelTree();
+      updateSelectionVisual();
+      highlightSelectedElementVisual();
+      updateSelectionUI();
+    }
+
+    // Helper to create a double-headed arrow for MOMENT visualization
+    function createMomentArrow(origin, direction, magnitude, scale) {
+        const group = new THREE.Group();
+        const length = scale * 0.04 * Math.log10(Math.abs(magnitude) + 10);
+        const color = 0x00ffff; // Cyan
+        const headLength = length * 0.3;
+        const headWidth = headLength * 0.5;
+
+        const lineGeom = new THREE.BufferGeometry().setFromPoints([ new THREE.Vector3(0, -length / 2, 0), new THREE.Vector3(0, length / 2, 0) ]);
+        const lineMat = new THREE.LineBasicMaterial({ color: color });
+        const line = new THREE.Line(lineGeom, lineMat);
+
+        const coneGeom = new THREE.ConeGeometry(headWidth, headLength, 8);
+        const coneMat = new THREE.MeshBasicMaterial({ color: color });
+        
+        const cone1 = new THREE.Mesh(coneGeom, coneMat);
+        cone1.position.y = length / 2;
+        
+        const cone2 = new THREE.Mesh(coneGeom, coneMat);
+        cone2.rotation.z = Math.PI;
+        cone2.position.y = -length / 2;
+        
+        group.add(line, cone1, cone2);
+        group.position.copy(origin);
+        group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
+        return group;
+    }
+
+    function drawOverlays() {
+      loadGroup.clear(); spcGroup.clear();
+      const sizeVec = model.bbox ? model.bbox.getSize(new THREE.Vector3()) : new THREE.Vector3(1, 1, 1);
+      const symScale = Number(symbolSize.value || 1.0) * 0.1;
+      const s = (sizeVec.length() || 1) * symScale;
+      
+      for (const f of model.loads.force) {
+        if (hidden.loads.has(f)) continue;
+        const idx = model.nodeIndex.get(f.nid);
+        if (idx === undefined) continue;
+        const p = nodePosition(idx);
+        const dir = visualToThree(f.dir[0], f.dir[1], f.dir[2]).normalize();
+        if (dir.length() === 0) continue;
+        const arrow = new THREE.ArrowHelper(dir, p, s * 0.04 * Math.log10(Math.abs(f.mag) + 10), 0xffcc66);
+        arrow.userData = { type: 'load', data: f };
+        if (arrow.cone) arrow.cone.userData = arrow.userData;
+        if (arrow.line) arrow.line.userData = arrow.userData;
+        loadGroup.add(arrow);
+      }
+      
+      for (const m of model.loads.moment) {
+        if (hidden.loads.has(m)) continue;
+        const idx = model.nodeIndex.get(m.nid);
+        if (idx === undefined) continue;
+        const p = nodePosition(idx);
+        const dir = visualToThree(m.dir[0], m.dir[1], m.dir[2]).normalize();
+        if (dir.length() === 0) continue;
+        const arrow = createMomentArrow(p, dir, m.mag, s);
+        arrow.userData = { type: 'load', data: m };
+        arrow.children.forEach(c => c.userData = arrow.userData); // Propagate to children for picking
+        loadGroup.add(arrow);
+      }
+
+      // Draw PLOADs as arrows at the face centroid pointing along the face normal.
+      if (Array.isArray(model.loads.pload)) {
+        for (const pl of model.loads.pload) {
+          if (hidden.loads.has(pl)) continue;
+          const indices = pl.nodes.map(nid => model.nodeIndex.get(nid));
+          if (indices.some(idx => idx === undefined)) continue;
+          const pts = indices.map(i => nodePosition(i));
+          const centroid = new THREE.Vector3();
+          for (const p of pts) centroid.add(p);
+          centroid.divideScalar(pts.length);
+          let normal = new THREE.Vector3(0,0,1);
+          if (pts.length >= 3) {
+            const v1 = new THREE.Vector3().subVectors(pts[1], pts[0]);
+            const v2 = new THREE.Vector3().subVectors(pts[pts.length - 1], pts[0]);
+            normal.crossVectors(v1, v2);
+            if (normal.lengthSq() < 1e-8) normal.set(0,0,1);
+            normal.normalize();
+          }
+          const mag = Math.abs(pl.p);
+          if (isNaN(mag) || mag === 0) continue;
+          const arrowLength = s * 0.04 * Math.log10(mag + 10);
+          const arrow = new THREE.ArrowHelper(normal, centroid, arrowLength, 0xff77aa);
+          arrow.userData = { type: 'load', data: pl };
+          if (arrow.cone) arrow.cone.userData = arrow.userData;
+          if (arrow.line) arrow.line.userData = arrow.userData;
+          loadGroup.add(arrow);
+        }
+      }
+      for (const s1 of model.spc1) {
+        for (const nid of s1.nodes) {
+          const idx = model.nodeIndex.get(nid);
+          if (idx === undefined) continue;
+          const key = s1.sid + ':' + nid;
+          if (hidden.spc.has(key)) continue;
+          const p = nodePosition(idx);
+          const cubeSize = s * 0.025;
+          const cube = new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), new THREE.MeshPhongMaterial({ color: 0x7ee787, transparent:true, opacity:0.7 }));
+          cube.position.copy(p);
+          cube.userData = { type:'spc', data:{ sid:s1.sid, components:s1.components, nid:nid }, key: key };
+          spcGroup.add(cube);
+        }
+      }
+      rebuildLabels();
+    }
+
+    // ---- Labels ----
+    function clearGroup(g){ while(g.children.length) g.remove(g.children[0]); }
+    function makeLabel(text, cls=''){ const el=document.createElement('div'); el.className='label '+cls; el.textContent=text; return new CSS2DObject(el); }
+    function rebuildLabels(){ 
+      const checked = {
+          nodes: showNodeIds.checked,
+          elems: showElemIds.checked,
+          spcs: showSPCLabels.checked,
+          loads: showLoadLabels.checked,
+      };
+      clearGroup(nodeLabelGroup); 
+      clearGroup(elemLabelGroup); 
+      clearGroup(spcLabelGroup); 
+      clearGroup(loadLabelGroup); 
+      if (!points) return; 
+      if (checked.nodes) buildNodeLabels(); 
+      if (checked.elems) buildElemLabels(); 
+      if (checked.spcs) buildSPCLabels(); 
+      if (checked.loads) buildLoadLabels(); 
+    }
+    function buildNodeLabels(){ for (let i=0;i<model.indexToNid.length;i++){ const nid=model.indexToNid[i]; const p=nodePosition(i); const lbl=makeLabel(String(nid),'muted'); lbl.position.copy(p); nodeLabelGroup.add(lbl);} }
+    function centroidOf(ids){ const v=new THREE.Vector3(); let n=0; for (const nid of ids){ const idx=model.nodeIndex.get(nid); if (idx===undefined) continue; v.add(nodePosition(idx)); n++; } if (n>0) v.multiplyScalar(1/n); return v; }
+    function midOf(n1,n2){ const a=nodePosition(model.nodeIndex.get(n1)); const b=nodePosition(model.nodeIndex.get(n2)); return a.add(b).multiplyScalar(0.5); }
+    function buildElemLabels(){ for (const e of model.elems.tri){ const c=centroidOf(e.n); const l=makeLabel(String(e.eid)); l.position.copy(c); elemLabelGroup.add(l);} for (const e of model.elems.quad){ const c=centroidOf(e.n); const l=makeLabel(String(e.eid)); l.position.copy(c); elemLabelGroup.add(l);} for (const e of model.elems.bar){ const c=midOf(e.n[0],e.n[1]); const l=makeLabel(String(e.eid)); l.position.copy(c); elemLabelGroup.add(l);} for (const e of model.elems.beam){ const c=midOf(e.n[0],e.n[1]); const l=makeLabel(String(e.eid)); l.position.copy(c); elemLabelGroup.add(l);} for (const e of model.elems.bush){ const c=midOf(e.n[0],e.n[1]); const l=makeLabel(String(e.eid)); l.position.copy(c); elemLabelGroup.add(l);} for (const e of model.elems.rbe2){ const idx=model.nodeIndex.get(e.gn); if (idx!==undefined){ const p=nodePosition(idx); const l=makeLabel(String(e.eid)); l.position.copy(p); elemLabelGroup.add(l);} } for (const e of model.elems.rbe3){ const idx=model.nodeIndex.get(e.gn); if (idx!==undefined){ const p=nodePosition(idx); const l=makeLabel(String(e.eid)); l.position.copy(p); elemLabelGroup.add(l);} } }
+    function buildSPCLabels(){ for (const s of model.spc1){ for (const nid of s.nodes){ const idx=model.nodeIndex.get(nid); if (idx===undefined) continue; const p=nodePosition(idx); const l=makeLabel('SID '+s.sid+' '+s.components,'muted'); l.position.copy(p.clone()); spcLabelGroup.add(l);} } }
+    function buildLoadLabels() {
+      const size = model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() : 0;
+      const symScale = Number(symbolSize.value || 1.0) * 0.1;
+      const sFactor = (size * 0.04 * symScale) || (size * 0.04 * 0.1);
+      
+      const allLoads = [...model.loads.force, ...model.loads.moment, ...model.loads.pload];
+
+      for (const load of allLoads) {
+        if(hidden.loads.has(load)) continue;
+        
+        let tip, txt;
+        const mode = loadLabelMode.value;
+
+        if (load.type === 'FORCE' || load.type === 'MOMENT') {
+            const idx = model.nodeIndex.get(load.nid);
+            if (idx === undefined) continue;
+            const p = nodePosition(idx);
+            const d = visualToThree(load.dir[0], load.dir[1], load.dir[2]).normalize();
+            if (d.lengthSq() === 0) continue;
+            
+            const arrowLength = sFactor * Math.log10(Math.abs(load.mag) + 10);
+            tip = p.clone().add(d.clone().multiplyScalar(arrowLength * (load.type === 'MOMENT' ? 0.5 : 1.0)));
+
+            if (mode === 'components') {
+              const [dx, dy, dz] = load.dir;
+              txt = `${load.type[0]}x ${(load.mag * dx).toPrecision(3)}, ${load.type[0]}y ${(load.mag * dy).toPrecision(3)}, ${load.type[0]}z ${(load.mag * dz).toPrecision(3)}`;
+            } else {
+              txt = `${load.type[0]} ${load.mag}`;
+            }
+        } else if (load.type === 'PLOAD') {
+          const indices = load.nodes.map(nid => model.nodeIndex.get(nid));
+          if (indices.some(idx => idx === undefined)) continue;
+          const centroid = new THREE.Vector3();
+          for (const i of indices) centroid.add(nodePosition(i));
+          centroid.divideScalar(indices.length);
+          let normal = new THREE.Vector3(0, 0, 1);
+          if (indices.length >= 3) {
+            const p0=nodePosition(indices[0]), p1=nodePosition(indices[1]), p2=nodePosition(indices[indices.length-1]);
+            normal.crossVectors(new THREE.Vector3().subVectors(p1, p0), new THREE.Vector3().subVectors(p2, p0)).normalize();
+          }
+          const mag = Math.abs(load.p);
+          if (isNaN(mag) || mag === 0) continue;
+          const arrowLength = sFactor * Math.log10(mag + 10);
+          tip = centroid.clone().add(normal.clone().multiplyScalar(arrowLength));
+          txt = 'P ' + load.p;
+        }
+
+        if(tip && txt) {
+            const l = makeLabel(txt);
+            l.position.copy(tip);
+            loadLabelGroup.add(l);
+        }
+      }
+    }
+
+    function nodePosition(idx){
+      if (!points || !points.geometry || !points.geometry.attributes || !points.geometry.attributes.position) {
+        const nid = model.indexToNid[idx];
+        const n = model.nodes.get(nid);
+        if (n) return visualToThree(n.x, n.y, n.z);
+        return new THREE.Vector3(0, 0, 0);
+      }
+      const pos = points.geometry.attributes.position;
+      return new THREE.Vector3(pos.getX(idx), pos.getY(idx), pos.getZ(idx));
+    }
+    function setNodePosition(idx, tx, ty, tz) {
+      const pos = points.geometry.attributes.position;
+      pos.setXYZ(idx, tx, ty, tz);
+      pos.needsUpdate = true;
+      buildGeometries(true); // Rebuild everything to update all connected elements
+      recomputeBBox();
+      drawOverlays();
+    }
+function recomputeBBox(){
+      let min = new THREE.Vector3(+Infinity,+Infinity,+Infinity);
+      let max = new THREE.Vector3(-Infinity,-Infinity,-Infinity);
+      if (points && points.geometry && points.geometry.attributes && points.geometry.attributes.position) {
+        const posAttr = points.geometry.attributes.position;
+        const v = new THREE.Vector3();
+        for (let i=0; i<posAttr.count; i++) {
+          v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+          min.min(v);
+          max.max(v);
+        }
+      } else {
+        for (const node of model.nodes.values()) {
+          const p = visualToThree(node.x, node.y, node.z);
+          min.min(p);
+          max.max(p);
+        }
+      }
+      if (isFinite(min.x) && isFinite(min.y) && isFinite(min.z) &&
+          isFinite(max.x) && isFinite(max.y) && isFinite(max.z)) {
+        model.bbox = new THREE.Box3(min, max);
+      } else if (!model.bbox) {
+        model.bbox = new THREE.Box3(new THREE.Vector3(-1,-1,-1), new THREE.Vector3(1,1,1));
+      }
+      if (typeof axesHelper !== 'undefined' && axesHelper && model.bbox) {
+        const sizeVec = model.bbox.getSize(new THREE.Vector3());
+        const diag = sizeVec.length();
+        const scale = diag > 0 ? diag * 0.15 : 1;
+        axesHelper.scale.setScalar(scale);
+        axesHelper.position.set(0, 0, 0);
+      }
+    }
+
+    function fitView(){ const box=model.bbox||new THREE.Box3(new THREE.Vector3(-1,-1,-1), new THREE.Vector3(1,1,1)); const size=box.getSize(new THREE.Vector3()).length()||1; const center=box.getCenter(new THREE.Vector3()); controls.target.copy(center); camera.near=size/100; camera.far=size*100; camera.updateProjectionMatrix(); camera.position.copy(center.clone().add(new THREE.Vector3(size,size,size))); controls.update(); }
+
+    function updateSelectionVisual() {
+      if (!highlightPoints) return;
+      const arr = [];
+      if (selectMode === 'node') {
+        for (const nid of selection.nodes) {
+          const idx = model.nodeIndex.get(nid);
+          if (idx !== undefined) {
+            const p = nodePosition(idx);
+            arr.push(p.x, p.y, p.z);
+          }
+        }
+      }
+      highlightPoints.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+      highlightPoints.geometry.setDrawRange(0, arr.length / 3);
+      if (highlightPoints.geometry.attributes.position) highlightPoints.geometry.attributes.position.needsUpdate = true;
+      highlightPoints.visible = (selectMode === 'node') && arr.length > 0;
+    }
+
+    function highlightSelectedElementVisual() {
+      if (selectedElemLines) {
+        scene.remove(selectedElemLines);
+        if (selectedElemLines.geometry) selectedElemLines.geometry.dispose();
+        if (selectedElemLines.material) selectedElemLines.material.dispose();
+        selectedElemLines = null;
+      }
+      const sel = Array.from(selection.elems);
+      if (sel.length === 0) return;
+      // Accumulate line segments for all selected elements
+      const positions = [];
+      const allElems = [...model.elems.tri, ...model.elems.quad, ...model.elems.bar, ...model.elems.beam, ...model.elems.bush, ...model.elems.rbe2, ...model.elems.rbe3];
+
+      for (const eid of sel) {
+        const foundElem = allElems.find(e => e.eid === eid);
+        if (!foundElem) continue;
+        
+        if (foundElem.type === 'RBE2' || foundElem.type === 'RBE3') {
+            const depNodes = foundElem.deps || foundElem.inds;
+            for (const depNid of depNodes) {
+                const p0 = nodePosition(model.nodeIndex.get(foundElem.gn));
+                const p1 = nodePosition(model.nodeIndex.get(depNid));
+                if(p0 && p1) positions.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z);
+            }
+        } else {
+            const nodes = foundElem.n;
+            for (let i = 0; i < nodes.length; i++) {
+                const idx0 = model.nodeIndex.get(nodes[i]);
+                const idx1 = model.nodeIndex.get(nodes[(i + 1) % nodes.length]);
+                if (idx0 === undefined || idx1 === undefined) continue;
+                const p0 = nodePosition(idx0);
+                const p1 = nodePosition(idx1);
+                positions.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z);
+            }
+        }
+      }
+
+      if (positions.length > 0) {
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        selectedElemLines = new THREE.LineSegments(geom, new THREE.LineBasicMaterial({ color: 0xffd166, linewidth: 3 }));
+        scene.add(selectedElemLines);
+      }
+    }
+
+    function updateSelectionUI() {
+      const editElemCard = document.getElementById('editElementCard');
+      if (selCount) {
+        const n = selection.nodes.size;
+        const m = selection.elems.size;
+        if (n === 0 && m === 0) selCount.textContent = 'None';
+        else if (m === 0) selCount.textContent = n + ' node' + (n === 1 ? '' : 's');
+        else if (n === 0) selCount.textContent = m + ' element' + (m === 1 ? '' : 's');
+        else selCount.textContent = n + ' nodes, ' + m + ' elements';
+      }
+
+      const showNodeEdit = (selectMode === 'node' && selection.nodes.size === 1 && selection.elems.size === 0);
+      singleSelectContainer.style.display = showNodeEdit ? '' : 'none';
+      if (showNodeEdit) {
+        const nid = Array.from(selection.nodes)[0];
+        const node = model.nodes.get(nid);
+        if (node) {
+          selNid.value = String(nid);
+          selX.value = node.x;
+          selY.value = node.y;
+          selZ.value = node.z;
+        }
+      }
+
+      const showElemEdit = (selectMode === 'element' && selection.elems.size === 1);
+      editElemCard.style.display = showElemEdit ? '' : 'none';
+      if (showElemEdit) {
+        const eid = Array.from(selection.elems)[0];
+        let elem;
+        for (const type in model.elems) {
+          const found = model.elems[type].find(e => e.eid === eid);
+          if (found) { elem = found; break; }
+        }
+        if (elem) {
+          document.getElementById('editEid').value = elem.eid;
+          document.getElementById('editPid').value = elem.pid;
+          const nodeFields = [
+            document.getElementById('editN1'),
+            document.getElementById('editN2'),
+            document.getElementById('editN3'),
+            document.getElementById('editN4')
+          ];
+          nodeFields.forEach((nf, i) => {
+            if (elem.n && i < elem.n.length) {
+              nf.value = elem.n[i];
+              nf.parentElement.style.display = '';
+            } else {
+              nf.value = '';
+              nf.parentElement.style.display = 'none';
+            }
+          });
+        }
+      }
+    }
+
+    function populateModelTree() {
+      if (!modelTreeContainer) return;
+      modelTreeContainer.innerHTML = '';
+      const root = document.createElement('ul');
+      const nodesLi = document.createElement('li');
+      nodesLi.textContent = 'Nodes (' + model.indexToNid.length + ')';
+      nodesLi.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        selection.nodes = new Set(model.indexToNid);
+        selection.elems.clear();
+        updateSelectionVisual();
+        updateSelectionUI();
+      });
+      root.appendChild(nodesLi);
+      
+      const totalElems = Object.values(model.elems).reduce((sum, arr) => sum + arr.length, 0);
+      const elemsLi = document.createElement('li');
+      elemsLi.textContent = 'Elements (' + totalElems + ')';
+      const elemSub = document.createElement('ul');
+      function addElemType(name, arr) {
+        if (arr.length === 0) return;
+        const li = document.createElement('li');
+        li.textContent = name + ' (' + arr.length + ')';
+        li.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const s = new Set();
+          for (const e of arr) {
+            if (Array.isArray(e.n)) {
+              for (const nid of e.n) s.add(nid);
+            } else {
+              if (e.gn !== undefined) s.add(e.gn);
+              const deps = e.deps || e.inds || [];
+              for (const nid of deps) s.add(nid);
+            }
+          }
+          selection.nodes = s;
+          selection.elems.clear();
+          updateSelectionVisual();
+          updateSelectionUI();
+        });
+        elemSub.appendChild(li);
+      }
+      addElemType('CTRIA3', model.elems.tri);
+      addElemType('CQUAD4', model.elems.quad);
+      addElemType('CBAR', model.elems.bar);
+      addElemType('CBEAM', model.elems.beam);
+      addElemType('CBUSH', model.elems.bush);
+      addElemType('RBE2', model.elems.rbe2);
+      addElemType('RBE3', model.elems.rbe3);
+      elemsLi.appendChild(elemSub);
+      elemsLi.addEventListener('click', (ev) => {
+        if (ev.target === elemsLi) elemsLi.classList.toggle('open');
+        ev.stopPropagation();
+      });
+      root.appendChild(elemsLi);
+
+      const totalLoads = (model.loads.force?.length || 0) + (model.loads.pload?.length || 0) + (model.loads.moment?.length || 0);
+      const loadsLi = document.createElement('li');
+      loadsLi.textContent = 'Loads (' + totalLoads + ')';
+      loadsLi.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const s = new Set();
+        if (model.loads.force) for (const f of model.loads.force) s.add(f.nid);
+        if (model.loads.moment) for (const m of model.loads.moment) s.add(m.nid);
+        if (model.loads.pload) for (const pl of model.loads.pload) for (const nid of pl.nodes) s.add(nid);
+        selection.nodes = s;
+        selection.elems.clear();
+        updateSelectionVisual();
+        updateSelectionUI();
+      });
+      root.appendChild(loadsLi);
+      
+      const spcCount = model.spc1.reduce((sum, grp) => sum + grp.nodes.length, 0);
+      const spcLi = document.createElement('li');
+      spcLi.textContent = 'SPC1 (' + spcCount + ')';
+      spcLi.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const s = new Set();
+        for (const grp of model.spc1) {
+          for (const nid of grp.nodes) s.add(nid);
+        }
+        selection.nodes = s;
+        selection.elems.clear();
+        updateSelectionVisual();
+        updateSelectionUI();
+      });
+      root.appendChild(spcLi);
+      
+      if (model.properties.size > 0) {
+        const propsLi = document.createElement('li');
+        propsLi.textContent = 'Properties (' + model.properties.size + ')';
+        const propsSub = document.createElement('ul');
+        for (const [pid, prop] of model.properties) {
+          const li = document.createElement('li');
+          li.textContent = prop.type + ' ' + pid;
+          li.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const s = new Set();
+            for (const t of Object.keys(model.elems)) {
+              for (const e of model.elems[t]) {
+                if (e.pid === pid) {
+                  const nodes = e.n || [e.gn, ...(e.deps || e.inds)];
+                  for (const nid of nodes) s.add(nid);
+                }
+              }
+            }
+            selection.nodes = s;
+            selection.elems.clear();
+            updateSelectionVisual();
+            updateSelectionUI();
+          });
+          propsSub.appendChild(li);
+        }
+        propsLi.appendChild(propsSub);
+        propsLi.addEventListener('click', (ev) => { if (ev.target === propsLi) propsLi.classList.toggle('open'); ev.stopPropagation(); });
+        root.appendChild(propsLi);
+      }
+      
+      if (model.materials.size > 0) {
+        const matsLi = document.createElement('li');
+        matsLi.textContent = 'Materials (' + model.materials.size + ')';
+        const matsSub = document.createElement('ul');
+        for (const [mid, mat] of model.materials) {
+          const li = document.createElement('li');
+          li.textContent = 'MAT1 ' + mid;
+          matsSub.appendChild(li);
+        }
+        matsLi.appendChild(matsSub);
+        matsLi.addEventListener('click', (ev) => { if (ev.target === matsLi) matsLi.classList.toggle('open'); ev.stopPropagation(); });
+        root.appendChild(matsLi);
+      }
+      modelTreeContainer.appendChild(root);
+    }
+
+    // --------------- Interaction ---------------
+    const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2(); let selectedIdx = -1;
+    function onClick(ev) {
+      if (ev.altKey || boxSelecting) return;
+      if (contextMenu && contextMenu.style.display === 'block') {
+        contextMenu.style.display = 'none';
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      if (selectMode === 'node') {
+        if (!points || !model.indexToNid.length) return;
+        raycaster.params.Points.threshold = (model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() * 0.005 : 0.1);
+        let indexHit = -1;
+        const hits = raycaster.intersectObject(points);
+        if (hits.length) {
+          indexHit = hits[0].index;
+        } else {
+          const rectCanvas = canvas.getBoundingClientRect();
+          const cx = ev.clientX - rectCanvas.left;
+          const cy = ev.clientY - rectCanvas.top;
+          let bestDist = Infinity;
+          for (let i = 0; i < model.indexToNid.length; i++) {
+            const p3 = nodePosition(i).clone().project(camera);
+            const sx = (p3.x * 0.5 + 0.5) * rectCanvas.width;
+            const sy = (-p3.y * 0.5 + 0.5) * rectCanvas.height;
+            const d = Math.hypot(sx - cx, sy - cy);
+            if (d < bestDist) { bestDist = d; indexHit = i; }
+          }
+          if (bestDist > 16) indexHit = -1;
+        }
+        if (indexHit >= 0) {
+          const nid = model.indexToNid[indexHit];
+          selectNode(indexHit);
+          if (currentElemInput) {
+            currentElemInput.value = String(nid);
+            const order = [elemN1, elemN2, elemN3, elemN4];
+            const idxInput = order.indexOf(currentElemInput);
+            if (idxInput >= 0) {
+              let nextIndex = idxInput + 1;
+              while (nextIndex < order.length && order[nextIndex]?.parentElement.style.display === 'none') nextIndex++;
+              if (nextIndex < order.length && order[nextIndex]?.parentElement.style.display !== 'none') {
+                currentElemInput = order[nextIndex];
+                order[nextIndex].focus();
+              } else {
+                currentElemInput = null;
+              }
+            } else { currentElemInput = null; }
+          }
+          if (multiSelectMode) {
+            if (selection.nodes.has(nid)) selection.nodes.delete(nid); else selection.nodes.add(nid);
+          } else {
+            selection.nodes = new Set([nid]);
+            selection.elems.clear();
+          }
+          updateSelectionVisual();
+          highlightSelectedElementVisual();
+          updateSelectionUI();
+        }
+      } else if (selectMode === 'element') {
+        raycaster.params.Line.threshold = (model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() * 0.01 : 0.1);
+        const intersectable = [meshShell, meshLines].filter(Boolean);
+        const hits = raycaster.intersectObjects(intersectable, false);
+        if (hits.length > 0) {
+            let hitData;
+            const hit = hits[0];
+            if (hit.object === meshShell) {
+                hitData = faceToElem[hit.faceIndex];
+            } else if (hit.object === meshLines) {
+                hitData = lineToElem[hit.faceIndex];
+            }
+            if (hitData) {
+              const { eid, nodes } = hitData;
+              if (multiSelectMode) {
+                  if (selection.elems.has(eid)) {
+                      selection.elems.delete(eid);
+                  } else {
+                      selection.elems.add(eid);
+                  }
+              } else {
+                  selection.elems = new Set([eid]);
+                  selection.nodes = new Set(nodes);
+              }
+              updateSelectionVisual();
+              highlightSelectedElementVisual();
+              updateSelectionUI();
+              statusMsg('Selected element ' + eid);
+            }
+        }
+      }
+    }
+    function selectNode(i){ 
+        if (i < 0) return;
+        selectedIdx=i; 
+        const nid=model.indexToNid[i]; 
+        const p=nodePosition(i); 
+        if (!selectionSphere){ 
+            selectionSphere=new THREE.Mesh(new THREE.SphereGeometry(1,16,12), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent:true, opacity:0.7 })); 
+            scene.add(selectionSphere);
+        }
+        const size = model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() : 1;
+        const symbolScale = Number(symbolSize.value || 1.0);
+        selectionSphere.scale.setScalar(size * 0.0025 * symbolScale);
+        selectionSphere.position.copy(p); 
+        
+        const visualCoords = threeToVisual(p);
+        selNid.value=String(nid); 
+        selX.value=visualCoords.x; 
+        selY.value=visualCoords.y; 
+        selZ.value=visualCoords.z; 
+        statusMsg('Selected node '+nid); 
+    }
+    canvas.addEventListener('click', onClick);
+
+    // --------------- UI hooks ---------------
+    const fileInput=document.getElementById('file'); const btnSample=document.getElementById('btnSample'); const btnClear=document.getElementById('btnClear'); const btnReset=document.getElementById('btnReset'); const btnExport=document.getElementById('btnExport'); const dropzone=document.getElementById('dropzone'); const statusEl=document.getElementById('status');
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
+    const selNid=document.getElementById('selNid'); const selX=document.getElementById('selX'); const selY=document.getElementById('selY'); const selZ=document.getElementById('selZ'); const btnApplyMove=document.getElementById('btnApplyMove'); const btnCancelMove=document.getElementById('btnCancelMove');
+    const sidEl=document.getElementById('sid'); const fMag=document.getElementById('fMag'); const fX=document.getElementById('fX'); const fY=document.getElementById('fY'); const fZ=document.getElementById('fZ'); const btnAddForce=document.getElementById('btnAddForce'); const spcComp=document.getElementById('spcComp'); const btnAddSPC=document.getElementById('btnAddSPC');
+    const mMag=document.getElementById('mMag'); const mX=document.getElementById('mX'); const mY=document.getElementById('mY'); const mZ=document.getElementById('mZ'); const btnAddMoment=document.getElementById('btnAddMoment');
+    const loadNodeId = document.getElementById('loadNodeId');
+    const showNodeIds=document.getElementById('showNodeIds'); const showElemIds=document.getElementById('showElemIds'); const showSPCLabels=document.getElementById('showSPCLabels'); const showLoadLabels=document.getElementById('showLoadLabels'); const loadLabelMode=document.getElementById('loadLabelMode');
+    const elemType = document.getElementById('elemType');
+    const elemEid = document.getElementById('elemEid');
+    const elemPid = document.getElementById('elemPid');
+    const elemN1 = document.getElementById('elemN1');
+    const elemN2 = document.getElementById('elemN2');
+    const elemN3 = document.getElementById('elemN3');
+    const elemN4 = document.getElementById('elemN4');
+    const elemCm = document.getElementById('elemCm');
+    const elemDepNodes = document.getElementById('elemDepNodes');
+    const elemIndNodes = document.getElementById('elemIndNodes');
+    const btnAddElement = document.getElementById('btnAddElement');
+    const newNid=document.getElementById('newNid');
+    const newY=document.getElementById('newY');
+    const newZ=document.getElementById('newZ');
+    const btnAddNode=document.getElementById('btnAddNode');
+    const nodeInputs = [elemN1, elemN2, elemN3, elemN4, elemDepNodes, elemIndNodes];
+    for (const inp of nodeInputs) {
+      if (!inp) continue;
+      inp.addEventListener('focus', () => { currentElemInput = inp; });
+    }
+    const modelTreeContainer=document.getElementById('modelTreeContainer');
+    const colorMode=document.getElementById('colorMode');
+    const selCount=document.getElementById('selCount');
+    const btnClearSelection=document.getElementById('btnClearSelection');
+    const singleSelectContainer=document.getElementById('singleSelectContainer');
+    const selectRect=document.getElementById('selectRect');
+    const multiSelectEl=document.getElementById('multiSelect');
+    const symbolSize = document.getElementById('symbolSize');
+    const springSize = document.getElementById('springSize');
+    const btnApplyElemEdit = document.getElementById('btnApplyElemEdit');
+    const btnCancelElemEdit = document.getElementById('btnCancelElemEdit');
+
+    if (multiSelectEl) {
+      multiSelectMode = multiSelectEl.checked;
+      multiSelectEl.addEventListener('change', () => { multiSelectMode = multiSelectEl.checked; });
+    }
+    if (symbolSize) symbolSize.addEventListener('input', () => { buildGeometries(true); selectNode(selectedIdx); });
+    if (springSize) springSize.addEventListener('input', () => { buildGeometries(true); });
+
+
+    const selectModeEl = document.getElementById('selectMode');
+    if (selectModeEl) {
+      selectMode = selectModeEl.value;
+      selectModeEl.addEventListener('change', (e) => {
+        selectMode = e.target.value;
+        selection.nodes.clear();
+        selection.elems.clear();
+        updateSelectionVisual();
+        highlightSelectedElementVisual();
+        updateSelectionUI();
+      });
+    }
+
+    if (colorMode) colorMode.addEventListener('change', () => { buildGeometries(true); });
+    if (btnClearSelection) btnClearSelection.addEventListener('click', () => {
+      selection.nodes.clear();
+      selection.elems.clear();
+      updateSelectionVisual();
+      highlightSelectedElementVisual();
+      updateSelectionUI();
+    });
+
+    if (canvas && selectRect) {
+      canvas.addEventListener('mousedown', (ev) => {
+        if (!ev.altKey) return;
+        const rect = viewportEl.getBoundingClientRect();
+        dragStart = { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+        boxSelecting = true;
+        if (controls) controls.enabled = false;
+        selectRect.style.display = 'block';
+        selectRect.style.left = dragStart.x + 'px';
+        selectRect.style.top = dragStart.y + 'px';
+        selectRect.style.width = '0px';
+        selectRect.style.height = '0px';
+        ev.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (ev) => {
+        if (!dragStart) return;
+        const rect = viewportEl.getBoundingClientRect();
+        const currentX = ev.clientX - rect.left;
+        const currentY = ev.clientY - rect.top;
+        const x = Math.min(dragStart.x, currentX);
+        const y = Math.min(dragStart.y, currentY);
+        const w = Math.abs(currentX - dragStart.x);
+        const h = Math.abs(currentY - dragStart.y);
+        selectRect.style.left = x + 'px';
+        selectRect.style.top = y + 'px';
+        selectRect.style.width = w + 'px';
+        selectRect.style.height = h + 'px';
+      });
+
+      window.addEventListener('mouseup', (ev) => {
+        if (!dragStart) return;
+        const rect = viewportEl.getBoundingClientRect();
+        const endX = ev.clientX - rect.left;
+        const endY = ev.clientY - rect.top;
+        const x1 = Math.min(dragStart.x, endX);
+        const x2 = Math.max(dragStart.x, endX);
+        const y1 = Math.min(dragStart.y, endY);
+        const y2 = Math.max(dragStart.y, endY);
+        const rectCanvas = canvas.getBoundingClientRect();
+        if (selectMode === 'node') {
+          // Select nodes within the box
+          if (points) {
+            const selectedInBox = [];
+            for (let i = 0; i < model.indexToNid.length; i++) {
+              const p = nodePosition(i).clone().project(camera);
+              const sx = (p.x + 1) * 0.5 * rectCanvas.width;
+              const sy = (1 - p.y) * 0.5 * rectCanvas.height;
+              if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+                selectedInBox.push(model.indexToNid[i]);
+              }
+            }
+            if (!multiSelectMode) selection.nodes.clear();
+            selection.elems.clear();
+            for (const nid of selectedInBox) selection.nodes.add(nid);
+            updateSelectionVisual();
+            updateSelectionUI();
+          }
+        } else if (selectMode === 'element') {
+          // Select elements whose centroid/midpoint projects inside the box
+          const selectedElems = [];
+          // Helper to project 3D vector to screen coordinates
+          function projectToScreen(vec3) {
+            const p = vec3.clone().project(camera);
+            const sx = (p.x + 1) * 0.5 * rectCanvas.width;
+            const sy = (1 - p.y) * 0.5 * rectCanvas.height;
+            return { sx, sy };
+          }
+          // Triangles
+          for (const e of model.elems.tri) {
+            if (hidden.elems && hidden.elems.has(e.eid)) continue;
+            const idxs = e.n.map(nid => model.nodeIndex.get(nid)).filter(i => i !== undefined);
+            if (idxs.length) {
+              const centroid = centroidOf(e.n);
+              const { sx, sy } = projectToScreen(centroid);
+              if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+                selectedElems.push({ eid: e.eid, nodes: e.n.slice() });
+              }
+            }
+          }
+          // Quads
+          for (const e of model.elems.quad) {
+            if (hidden.elems && hidden.elems.has(e.eid)) continue;
+            const centroid = centroidOf(e.n);
+            const { sx, sy } = projectToScreen(centroid);
+            if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+              selectedElems.push({ eid: e.eid, nodes: e.n.slice() });
+            }
+          }
+          // Bars, beams, bush: use midpoint
+          for (const arrName of ['bar', 'beam', 'bush']) {
+            for (const e of model.elems[arrName]) {
+              if (hidden.elems && hidden.elems.has(e.eid)) continue;
+              const pMid = midOf(e.n[0], e.n[1]);
+              const { sx, sy } = projectToScreen(pMid);
+              if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+                selectedElems.push({ eid: e.eid, nodes: e.n.slice() });
+              }
+            }
+          }
+          // RBE2/RBE3: use the GN node position for selection
+          for (const e of model.elems.rbe2) {
+            if (hidden.elems && hidden.elems.has(e.eid)) continue;
+            const idx = model.nodeIndex.get(e.gn);
+            if (idx !== undefined) {
+              const p = nodePosition(idx);
+              const { sx, sy } = projectToScreen(p);
+              if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+                const nodes = [e.gn, ...e.deps];
+                selectedElems.push({ eid: e.eid, nodes });
+              }
+            }
+          }
+          for (const e of model.elems.rbe3) {
+            if (hidden.elems && hidden.elems.has(e.eid)) continue;
+            const idx = model.nodeIndex.get(e.gn);
+            if (idx !== undefined) {
+              const p = nodePosition(idx);
+              const { sx, sy } = projectToScreen(p);
+              if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+                const nodes = [e.gn, ...e.inds];
+                selectedElems.push({ eid: e.eid, nodes });
+              }
+            }
+          }
+          // Update selection sets
+          if (!multiSelectMode) {
+            selection.elems.clear();
+            selection.nodes.clear();
+          }
+          for (const se of selectedElems) {
+            if (multiSelectMode && selection.elems.has(se.eid)) {
+              selection.elems.delete(se.eid);
+              for (const n of se.nodes) selection.nodes.delete(n);
+            } else {
+              selection.elems.add(se.eid);
+              for (const n of se.nodes) selection.nodes.add(n);
+            }
+          }
+          updateSelectionVisual();
+          highlightSelectedElementVisual();
+          updateSelectionUI();
+        }
+        if (controls) controls.enabled = true;
+        dragStart = null;
+        boxSelecting = false;
+        selectRect.style.display = 'none';
+      });
+    }
+
+    fileInput.addEventListener('change', async (e)=>{ const f=e.target.files[0]; if (!f) return; const text=await f.text(); loadFromText(text, f.name); });
+    btnSample.addEventListener('click', ()=> loadFromText(sampleBDF(), 'sample.dat'));
+    btnClear.addEventListener('click', ()=>{ historyManager.recordAction(() => { resetModel(); clearScene(); refreshCounts(); statusMsg('Cleared model.'); }); });
+    btnReset.addEventListener('click', fitView);
+    btnExport.addEventListener('click', exportBDF);
+
+    btnApplyMove.addEventListener('click', ()=>{ if (selectedIdx<0) return; historyManager.recordAction(() => { const nid = model.indexToNid[selectedIdx]; const node = model.nodes.get(nid); if(!node) return; const p = visualToThree(Number(selX.value), Number(selY.value), Number(selZ.value)); node.x=Number(selX.value); node.y=Number(selY.value); node.z=Number(selZ.value); setNodePosition(selectedIdx, p.x, p.y, p.z); statusMsg('Moved node '+nid); }); });
+    btnCancelMove.addEventListener('click', ()=>{ if (selectedIdx<0) return; const p=nodePosition(selectedIdx); const v = threeToVisual(p); selX.value=v.x; selY.value=v.y; selZ.value=v.z; });
+
+    btnApplyElemEdit.addEventListener('click', () => {
+        const eid = parseInt(document.getElementById('editEid').value);
+        if (isNaN(eid)) return;
+        historyManager.recordAction(() => {
+            let elem;
+            for (const type in model.elems) {
+              const found = model.elems[type].find(e => e.eid === eid);
+              if (found) { elem = found; break; }
+            }
+            if (!elem) {
+                statusMsg(`Element ${eid} not found.`, true);
+                return;
+            }
+
+            const newPid = parseInt(document.getElementById('editPid').value);
+            if (!isNaN(newPid)) elem.pid = newPid;
+
+            const nodeFields = [document.getElementById('editN1'), document.getElementById('editN2'), document.getElementById('editN3'), document.getElementById('editN4')];
+            const newNodes = [];
+            let allNodesValid = true;
+            for (let i = 0; i < elem.n.length; i++) {
+                const nVal = parseInt(nodeFields[i].value);
+                if (isNaN(nVal) || !model.nodes.has(nVal)) {
+                    allNodesValid = false;
+                    break;
+                }
+                newNodes.push(nVal);
+            }
+
+            if (allNodesValid) {
+                elem.n = newNodes;
+                statusMsg(`Updated element ${eid}.`);
+                buildGeometries(true);
+            } else {
+                statusMsg(`Invalid node ID entered for element ${eid}. Aborting edit.`, true);
+                // We are inside a recordAction, so this invalid state won't be saved.
+                // A better implementation would throw an error here to abort the history recording.
+            }
+        });
+        document.getElementById('editElementCard').style.display = 'none';
+        selection.elems.clear();
+        updateSelectionUI();
+        highlightSelectedElementVisual();
+    });
+
+    btnCancelElemEdit.addEventListener('click', () => {
+      document.getElementById('editElementCard').style.display = 'none';
+      selection.elems.clear();
+      updateSelectionUI();
+      highlightSelectedElementVisual();
+    });
+
+
+    function getTargetNodes() {
+        const manualIds = loadNodeId.value.split(/[\s,]+/)
+            .map(s => parseInt(s.trim()))
+            .filter(v => !isNaN(v) && model.nodes.has(v));
+        
+        if (manualIds.length > 0) return manualIds;
+        if (selection.nodes.size > 0) return Array.from(selection.nodes);
+        return [];
+    }
+
+    btnAddForce.addEventListener('click', ()=>{ 
+        const targetNids = getTargetNodes();
+        if (targetNids.length === 0) {
+            statusMsg('Enter valid node ID(s) or select node(s) first.', true); 
+            return; 
+        }
+        historyManager.recordAction(() => {
+            const sid = Number(sidEl.value||1); 
+            const mag = Number(fMag.value||0); 
+            const dir = [Number(fX.value||0),Number(fY.value||0),Number(fZ.value||0)]; 
+            let count = 0;
+            for (const nid of targetNids) {
+                model.loads.force.push({ type: 'FORCE', sid, nid, cid:0, mag, dir }); 
+                count++;
+            }
+            drawOverlays(); 
+            refreshCounts(); 
+            statusMsg(`Added FORCE on ${count} node(s).`); 
+            loadNodeId.value = '';
+        });
+    });
+
+    btnAddMoment.addEventListener('click', ()=>{ 
+        const targetNids = getTargetNodes();
+        if (targetNids.length === 0) {
+            statusMsg('Enter valid node ID(s) or select node(s) first.', true); 
+            return; 
+        }
+        historyManager.recordAction(() => {
+            const sid = Number(sidEl.value||1); 
+            const mag = Number(mMag.value||0); 
+            const dir = [Number(mX.value||0),Number(mY.value||0),Number(mZ.value||0)]; 
+            let count = 0;
+            for (const nid of targetNids) {
+                model.loads.moment.push({ type: 'MOMENT', sid, nid, cid:0, mag, dir }); 
+                count++;
+            }
+            drawOverlays(); 
+            refreshCounts(); 
+            statusMsg(`Added MOMENT on ${count} node(s).`); 
+            loadNodeId.value = '';
+        });
+    });
+
+    btnAddSPC.addEventListener('click', ()=>{ 
+        const targetNids = getTargetNodes();
+        if (targetNids.length === 0) {
+            statusMsg('Enter valid node ID(s) or select node(s) first.', true); 
+            return;
+        }
+        historyManager.recordAction(() => {
+            const sid = Number(sidEl.value||1); 
+            const components = (spcComp.value||'123'); 
+            let grp = model.spc1.find(s=>s.sid===sid && s.components===components); 
+            if (!grp){ grp={sid, components, nodes:[]}; model.spc1.push(grp);} 
+            let count = 0;
+            for (const nid of targetNids) {
+                if (!grp.nodes.includes(nid)) {
+                    grp.nodes.push(nid);
+                    count++;
+                }
+            }
+            drawOverlays(); 
+            refreshCounts(); 
+            statusMsg(`Added SPC1 ${components} on ${count} node(s).`); 
+            loadNodeId.value = '';
+        });
+    });
+
+    for (const el of [showNodeIds, showElemIds, showSPCLabels, showLoadLabels, loadLabelMode]) el.addEventListener('change', rebuildLabels);
+
+    const contextMenu = document.getElementById('contextMenu');
+    canvas.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      let entity = null;
+      let eType = null;
+      
+      const loadHits = raycaster.intersectObjects(loadGroup.children, true);
+      if (loadHits.length) {
+        let parent = loadHits[0].object;
+        while(parent && !parent.userData.type) parent = parent.parent; // Handle grouped objects like moments
+        if(parent) { entity = parent; eType = parent.userData.type; }
+      }
+      if (!entity) {
+        const spcHits = raycaster.intersectObjects(spcGroup.children, true);
+        if (spcHits.length) { entity = spcHits[0].object; eType = 'spc'; }
+      }
+      if (!entity) {
+        raycaster.params.Line.threshold = (model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() * 0.01 : 0.1);
+        const hits = raycaster.intersectObjects([meshShell, meshLines].filter(Boolean), false);
+        if (hits.length > 0) {
+            eType = 'elem';
+            const hit = hits[0];
+            if (hit.object === meshShell) {
+                entity = faceToElem[hit.faceIndex];
+            } else if (hit.object === meshLines) {
+                entity = lineToElem[hit.faceIndex];
+            }
+        }
+      }
+      if (!entity && points) {
+        raycaster.params.Points.threshold = (model.bbox ? model.bbox.getSize(new THREE.Vector3()).length() * 0.005 : 0.1);
+        const nhits = raycaster.intersectObject(points);
+        if (nhits.length) {
+          const i = nhits[0].index;
+          entity = { i: i, nid: model.indexToNid[i] };
+          eType = 'node';
+        }
+      }
+
+      if (!entity) { contextMenu.style.display = 'none'; return; }
+      
+      contextMenu.innerHTML = '';
+      const makeItem = (label, fn) => {
+        const div = document.createElement('div');
+        div.textContent = label;
+        div.addEventListener('click', () => { fn(); contextMenu.style.display = 'none'; });
+        return div;
+      };
+      
+      contextMenu.appendChild(makeItem('Hide', () => {
+        if (eType === 'elem') { hidden.elems.add(entity.eid); buildGeometries(true); } 
+        else if (eType === 'load') { if (entity?.userData?.data) hidden.loads.add(entity.userData.data); drawOverlays(); } 
+        else if (eType === 'spc') { if (entity?.userData?.key) hidden.spc.add(entity.userData.key); drawOverlays(); } 
+        else if (eType === 'node') { hidden.nodes.add(entity.nid); statusMsg('Node hiding not supported.', true); }
+        rebuildLabels();
+      }));
+      
+      contextMenu.appendChild(makeItem('Show All', () => {
+        if (eType === 'elem') { hidden.elems.clear(); buildGeometries(true); } 
+        else if (eType === 'load') { hidden.loads.clear(); drawOverlays(); } 
+        else if (eType === 'spc') { hidden.spc.clear(); drawOverlays(); } 
+        else if (eType === 'node') { hidden.nodes.clear(); }
+        rebuildLabels();
+      }));
+
+      contextMenu.appendChild(makeItem('Edit', () => {
+        if (eType === 'elem') {
+            selection.elems = new Set([entity.eid]);
+            selection.nodes = new Set(entity.nodes);
+            selectModeEl.value = 'element';
+            selectMode = 'element';
+            updateSelectionVisual();
+            highlightSelectedElementVisual();
+            updateSelectionUI();
+        } else if (eType === 'node') {
+            selectNode(entity.i);
+            selection.nodes = new Set([entity.nid]);
+            selection.elems.clear();
+            selectModeEl.value = 'node';
+            selectMode = 'node';
+            updateSelectionVisual();
+            highlightSelectedElementVisual();
+            updateSelectionUI();
+        } else if (eType === 'load') {
+            const loadData = entity.userData.data;
+            historyManager.recordAction(() => {
+                const newMagVal = prompt(`Enter new magnitude for ${loadData.type} on Node ${loadData.nid}:`, loadData.mag);
+                if(newMagVal !== null) {
+                    const newMag = parseFloat(newMagVal);
+                    if(!isNaN(newMag)) loadData.mag = newMag;
+                }
+                const newDirVal = prompt(`Enter new direction vector (X,Y,Z) for ${loadData.type} on Node ${loadData.nid}:`, loadData.dir.join(', '));
+                if(newDirVal !== null) {
+                    const newDir = newDirVal.split(/[\s,]+/).map(s=>parseFloat(s)).filter(v=>!isNaN(v));
+                    if(newDir.length === 3) loadData.dir = newDir;
+                }
+                drawOverlays();
+            });
+        }
+      }));
+
+      contextMenu.appendChild(makeItem('Delete', () => {
+        historyManager.recordAction(() => {
+            if (eType === 'elem') {
+              for(const type in model.elems) {
+                  const idx = model.elems[type].findIndex(e => e.eid === entity.eid);
+                  if (idx > -1) { model.elems[type].splice(idx, 1); break; }
+              }
+              hidden.elems.delete(entity.eid);
+              selection.elems.delete(entity.eid);
+              buildGeometries(true);
+            } else if (eType === 'load') {
+                const data = entity.userData.data;
+                let arr;
+                if(data.type === 'FORCE') arr = model.loads.force;
+                else if(data.type === 'MOMENT') arr = model.loads.moment;
+                else if(data.type === 'PLOAD') arr = model.loads.pload;
+
+                if (arr) {
+                  const idx = arr.indexOf(data);
+                  if (idx > -1) arr.splice(idx, 1);
+                }
+                hidden.loads.delete(data);
+                drawOverlays();
+            } else if (eType === 'spc') {
+                const {sid, nid} = entity.userData.data;
+                for (let i = model.spc1.length - 1; i >= 0; i--) {
+                    if (model.spc1[i].sid === sid) {
+                        const nodeIdx = model.spc1[i].nodes.indexOf(nid);
+                        if (nodeIdx > -1) model.spc1[i].nodes.splice(nodeIdx, 1);
+                        if (model.spc1[i].nodes.length === 0) model.spc1.splice(i, 1);
+                    }
+                }
+                hidden.spc.delete(entity.userData.key);
+                drawOverlays();
+            }
+            refreshCounts();
+            rebuildLabels();
+        });
+      }));
+      
+      const offset = 2;
+      contextMenu.style.left = (ev.clientX + offset) + 'px';
+      contextMenu.style.top = (ev.clientY + offset) + 'px';
+      contextMenu.style.display = 'block';
+    });
+    document.addEventListener('click', (e) => {
+      if (contextMenu && !contextMenu.contains(e.target)) {
+          contextMenu.style.display = 'none';
+      }
+    });
+
+    if (btnAddNode) {
+      btnAddNode.addEventListener('click', () => {
+        historyManager.recordAction(() => {
+            let val = newNid.value.trim();
+            let nid = parseInt(val);
+            if (isNaN(nid) || model.nodes.has(nid)) {
+              nid = (model.nodes.size > 0 ? Math.max(...model.nodes.keys()) : 0) + 1;
+            }
+            const x = Number(newX.value || 0), y = Number(newY.value || 0), z = Number(newZ.value || 0);
+            const hadNodes = model.nodes.size > 0;
+            model.nodes.set(nid, { x, y, z });
+            const nidsArr = Array.from(model.nodes.keys()).sort((a,b) => a - b);
+            model.indexToNid = nidsArr;
+            model.nodeIndex = new Map(nidsArr.map((nid,i) => [nid, i]));
+            hidden.nodes.delete(nid);
+            buildGeometries(hadNodes);
+            if (!hadNodes) fitView();
+            refreshCounts();
+            statusMsg('Added node ' + nid);
+            newNid.value = '';
+        });
+      });
+    }
+
+    if (elemType) {
+        const updateElemUI = () => {
+            const type = elemType.value;
+            const card = document.getElementById('addElementCard');
+            if (!card) return;
+
+            // Helper to show or hide a row.
+            const showRow = (selector, condition) => {
+                const el = card.querySelector(selector);
+                if (!el) return;
+                let rowEl = el.closest('.row');
+                if (rowEl) rowEl.style.display = condition ? '' : 'none';
+            };
+            
+            const n1Label = document.getElementById('elemN1Label');
+
+            showRow('#elemN1', true);
+            showRow('#elemN2', /cbar|cbeam|cbush|ctria3|cquad4/.test(type));
+            showRow('#elemN3', /ctria3|cquad4/.test(type));
+            showRow('#elemN4', type === 'cquad4');
+            showRow('#elemCmRow', /rbe2|rbe3/.test(type));
+            showRow('#elemDepNodesRow', type === 'rbe2');
+            showRow('#elemIndNodesRow', type === 'rbe3');
+            showRow('#elemPid', !/rbe2|rbe3/.test(type));
+            
+            if (type === 'rbe2') {
+                n1Label.textContent = 'Indep Node';
+            } else if (type === 'rbe3') {
+                n1Label.textContent = 'Dep Node';
+            } else {
+                n1Label.textContent = 'Node 1';
+            }
+        };
+        elemType.addEventListener('change', updateElemUI);
+        updateElemUI(); // Initial call
+    }
+
+
+    if (btnAddElement) {
+        btnAddElement.addEventListener('click', () => {
+            historyManager.recordAction(() => {
+                const type = elemType.value;
+                const eid = Number(elemEid.value || 0);
+                const pid = Number(elemPid.value || 1);
+                const n1 = parseInt(elemN1.value);
+                const n2 = parseInt(elemN2.value);
+                const n3 = parseInt(elemN3.value);
+                const n4 = parseInt(elemN4.value);
+                const cm = elemCm.value || '123456';
+                const parseCSV = (str) => str.split(/[\s,]+/).map(s => parseInt(s)).filter(v => !isNaN(v) && model.nodes.has(v));
+                
+                const getRbeNodes = (inputEl) => {
+                    const csvNodes = parseCSV(inputEl.value);
+                    if (csvNodes.length > 0) return csvNodes;
+                    // If text is empty, use multi-selection, excluding the GN if it's selected
+                    return Array.from(selection.nodes).filter(nid => nid !== n1);
+                };
+
+                const deps = type === 'rbe2' ? getRbeNodes(elemDepNodes) : [];
+                const inds = type === 'rbe3' ? getRbeNodes(elemIndNodes) : [];
+
+                let newElem;
+                let msg = '';
+                
+                try {
+                    switch (type) {
+                        case 'cquad4':
+                            if ([n1,n2,n3,n4].some(isNaN)) throw new Error('CQUAD4 requires 4 valid node IDs.');
+                            newElem = { eid, pid, n: [n1, n2, n3, n4], type: 'CQUAD4' };
+                            model.elems.quad.push(newElem);
+                            msg = `Added CQUAD4 ${eid}`;
+                            break;
+                        case 'ctria3':
+                            if ([n1,n2,n3].some(isNaN)) throw new Error('CTRIA3 requires 3 valid node IDs.');
+                            newElem = { eid, pid, n: [n1, n2, n3], type: 'CTRIA3' };
+                            model.elems.tri.push(newElem);
+                            msg = `Added CTRIA3 ${eid}`;
+                            break;
+                        case 'cbar':
+                        case 'cbeam':
+                        case 'cbush':
+                            if ([n1,n2].some(isNaN)) throw new Error(`${type.toUpperCase()} requires 2 valid node IDs.`);
+                            newElem = { eid, pid, n: [n1, n2], type: type.toUpperCase() };
+                            const key = type.replace('cbar', 'bar').replace('cbeam', 'beam').replace('cbush', 'bush');
+                            model.elems[key].push(newElem);
+                            msg = `Added ${type.toUpperCase()} ${eid}`;
+                            break;
+                        case 'rbe2':
+                            if (isNaN(n1) || deps.length === 0) throw new Error('RBE2 requires a GN (Node 1) and dependent nodes (multi-select or CSV).');
+                            newElem = { eid, gn: n1, cm, deps, type: 'RBE2' };
+                            model.elems.rbe2.push(newElem);
+                            msg = `Added RBE2 ${eid}`;
+                            break;
+                        case 'rbe3':
+                            if (isNaN(n1) || inds.length === 0) throw new Error('RBE3 requires a GN (Node 1) and independent nodes (multi-select or CSV).');
+                            newElem = { eid, gn: n1, cm, inds, type: 'RBE3' };
+                            model.elems.rbe3.push(newElem);
+                            msg = `Added RBE3 ${eid}`;
+                            break;
+                    }
+                    statusMsg(msg);
+                    buildGeometries(true);
+                    recomputeBBox();
+                    refreshCounts();
+                } catch (e) {
+                    statusMsg(e.message, true);
+                }
+            });
+        });
+    }
+
+
+    window.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.style.display='flex'; });
+    window.addEventListener('dragleave', (e)=>{ if (e.target.id === 'app') dropzone.style.display='none'; });
+    window.addEventListener('drop', async (e)=>{ e.preventDefault(); dropzone.style.display='none'; const f=e.dataTransfer.files?.[0]; if (!f) return; const text=await f.text(); loadFromText(text, f.name); });
+    function loadFromText(text, name='model.dat') { try { parseBDF(text); buildGeometries(); statusMsg('Loaded '+name+'. Nodes: '+model.indexToNid.length); historyManager.clear(); } catch (e) { console.error(e); statusMsg('Failed to load file (see console).', true); } }
+    function refreshCounts(){
+      const nNodes = model.indexToNid.length;
+      const nElems = Object.values(model.elems).reduce((s, a) => s + a.length, 0);
+      const nLoads = (model.loads.force?.length || 0) + (model.loads.pload?.length || 0) + (model.loads.moment?.length || 0);
+      const nSPC = model.spc1.reduce((sum, grp) => sum + grp.nodes.length, 0);
+    }
+    function statusMsg(msg, isErr=false){ statusEl.textContent=msg; statusEl.classList.toggle('danger', !!isErr); }
+
+    function onResize(){
+      const r=document.getElementById('viewport').getBoundingClientRect();
+      renderer.setSize(r.width, r.height, false);
+      labelRenderer.setSize(r.width, r.height);
+      camera.aspect=r.width/r.height;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', onResize); onResize();
+
+    // --------------- History (Undo/Redo) ---------------
+    const historyManager = {
+      stack: [],
+      pointer: -1,
+      maxSize: 50,
+      
+      cloneState: function() {
+        // Custom deep clone to handle Maps
+        const state = {
+          nodes: new Map(JSON.parse(JSON.stringify(Array.from(model.nodes)))),
+          elems: JSON.parse(JSON.stringify(model.elems)),
+          loads: JSON.parse(JSON.stringify(model.loads)),
+          spc1: JSON.parse(JSON.stringify(model.spc1)),
+          properties: new Map(JSON.parse(JSON.stringify(Array.from(model.properties)))),
+          materials: new Map(JSON.parse(JSON.stringify(Array.from(model.materials)))),
+        };
+        return state;
+      },
+      
+      recordAction: function(actionFn) {
+        if (this.pointer < this.stack.length - 1) {
+          this.stack.splice(this.pointer + 1);
+        }
+        actionFn();
+        this.stack.push(this.cloneState());
+        if (this.stack.length > this.maxSize) {
+          this.stack.shift();
+        } else {
+          this.pointer++;
+        }
+        updateUndoRedoButtons();
+      },
+
+      undo: function() {
+        if (this.pointer > 0) {
+          this.pointer--;
+          this.restoreState(this.stack[this.pointer]);
+        }
+      },
+
+      redo: function() {
+        if (this.pointer < this.stack.length - 1) {
+          this.pointer++;
+          this.restoreState(this.stack[this.pointer]);
+        }
+      },
+
+      restoreState: function(state) {
+        model.nodes = new Map(state.nodes);
+        model.elems = JSON.parse(JSON.stringify(state.elems));
+        model.loads = JSON.parse(JSON.stringify(state.loads));
+        model.spc1 = JSON.parse(JSON.stringify(state.spc1));
+        model.properties = new Map(state.properties);
+        model.materials = new Map(state.materials);
+
+        const nids = Array.from(model.nodes.keys()).sort((a,b)=>a-b);
+        model.indexToNid = nids;
+        model.nodeIndex = new Map(nids.map((nid,i)=>[nid,i]));
+        
+        buildGeometries(true);
+        updateUndoRedoButtons();
+      },
+      
+      clear: function() {
+        this.stack = [];
+        this.pointer = -1;
+        this.stack.push(this.cloneState()); // Push initial empty state
+        this.pointer = 0;
+        updateUndoRedoButtons();
+      }
+    };
+    
+    function updateUndoRedoButtons() {
+        btnUndo.disabled = historyManager.pointer <= 0;
+        btnRedo.disabled = historyManager.pointer >= historyManager.stack.length - 1;
+    }
+
+    btnUndo.addEventListener('click', () => historyManager.undo());
+    btnRedo.addEventListener('click', () => historyManager.redo());
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            btnUndo.click();
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            btnRedo.click();
+        }
+    });
+(function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+
+  // 1. Render the main scene
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+
+  // 2. Render the compass overlay
+  if (compassRenderer) {
+    // Calculate the camera's offset vector from its target
+    const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+    // Scale this vector to a fixed length so the compass doesn't zoom
+    offset.setLength(2.5); 
+    
+    // Apply this fixed offset to the compass camera's position
+    compassCamera.position.copy(offset);
+    // Make the compass camera look back at its own origin
+    compassCamera.lookAt(0, 0, 0);
+
+    compassRenderer.render(compassScene, compassCamera);
+  }
+})();
+
+    function sampleBDF(){ return `$
+$ Tiny sample: quad plate, bars, bush, RBE2/3
+GRID, 1, , 0., 0., 0.
+GRID, 2, , 1., 0., 0.
+GRID, 3, , 1., 1., 0.
+GRID, 4, , 0., 1., 0.
+GRID, 5, , 0.5, 0.5, 0.
+GRID, 6, , 1.5, 0.5, 0.
+CQUAD4, 10, 1, 1, 2, 3, 4
+CBAR, 20, 2, 1, 3
+CBEAM, 21, 2, 2, 4
+CBUSH, 30, 3, 5, 6
+RBE2, 40, 5, 123456, 1, 2, 4
+RBE3, 41, 3, 123456, 1, 2, 4
+FORCE, 1, 3, 0, 500., 0., 0., -1.
+MOMENT, 1, 4, 0, 250., 0., 1., 0.
+PLOAD, 1, 10.0, 1, 2, 3, 4
+SPC1, 1, 123, 1, 2
+ENDDATA`; }
+  
+    historyManager.clear();
+  </script>
+</body>
+</html>
