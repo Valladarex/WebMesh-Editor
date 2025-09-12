@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <!-- 
   Version: 0.80 (Milestone 1 Complete + UX/Render Fixes)
-  Changes:
-  1.  **Clipping Plane Robustness:**
-      - The slider range now dynamically calculates the full extent of the model along the chosen axis, ensuring it can always clip through the entire part.
-      - Fixed the issue where Ctrl+Mouse Wheel would both zoom and move the plane. It now correctly blocks the zoom action and only moves the clipping plane.
-  2.  **Label Culling Stability:**
-      - Implemented a camera movement threshold for the label culling logic. This completely eliminates the "flickering" of labels when the camera is stationary or moving very slightly, making the feature much more stable and usable.
+Key Changes:
+
+**New Feature: Clipping Plane Tool:** Added a "Clipping" card to slice the model along XY, YZ, or XZ planes. Position can be set to a selected node, and the offset is adjustable with a slider or Ctrl+Mouse Wheel.
+**New Feature: Label Culling:** Added a "Cull Labels" option (on by default) to intelligently hide overlapping labels and prevent visual clutter on dense models. The flickering issue has been resolved.
+**UX Enhancements:**
+* Sidebar cards are now collapsible.
+* Double-click anywhere on the model to set the camera's rotation pivot point.
+* Added a "Copy Selected Node Coords" button to the Add Node card.
+* Parallel View (Orthographic Camera) is now fully functional.
 -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebMesh Editor v0.9.3</title>
+  <title>WebMesh Editor v0.80</title>
   <style>
     :root {
       --bg: #0f1115; --panel: #141821; --text: #e6e8ee; --muted: #9aa3b2; --accent: #5aa9ff; --danger: #ff6b6b; --ok: #4ad295; --border: #1f2430;
@@ -117,7 +120,7 @@
 <body>
   <div id="app">
     <header>
-      <h1>WebMesh Editor v0.9.3</h1>
+      <h1>WebMesh Editor v0.80</h1>
       <span class="pill">Rotate: LMB</span>
       <span class="pill">Pan: RMB</span>
       <span class="pill">Zoom: Wheel</span>
