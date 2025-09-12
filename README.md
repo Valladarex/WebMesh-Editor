@@ -5,7 +5,7 @@ A lightweight, in-browser editor for viewing, modifying, and creating simple Nas
 ### 
 
 LiveDemo(viaGitHubPages)
-(https://valladarex.github.io/WebMesh-Editor/WebMeshEditorv0.72.html)
+(https://valladarex.github.io/WebMesh-Editor/)
 
 ## Key Features
 
