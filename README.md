@@ -2,7 +2,7 @@
 
 A lightweight, in-browser editor for viewing, modifying, and creating simple Nastran (.dat, .bdf) finite element models. This tool is a single, self-contained HTML file with no server-side dependencies, making it easy to run offline or host on any static web server.
 
-[LiveDemo(viaGitHubPages)](https://valladarex.github.io/WebMesh-Editor/WebMeshEditorv0.98.html)
+[LiveDemo(viaGitHubPages)](https://valladarex.github.io/WebMesh-Editor/WebMeshEditor.html)
 
 ## Key Features
 
