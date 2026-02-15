@@ -369,10 +369,25 @@
     .tab-btn:hover { color: var(--text); }
     .schema-fields { max-height: none; overflow: hidden; padding-right: 4px; min-height: 0; }
     .schema-field-row { align-items: flex-start; }
-    .schema-label-wrap { width: 168px; min-width: 168px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-height: 26px; }
+    .schema-label-wrap { width: 220px; min-width: 220px; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-height: 28px; }
     .schema-label-wrap label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
     .schema-field-row input { flex: 1; }
-    .schema-badge { font-size: 10px; line-height: 1; padding: 2px 5px; border-radius: 10px; border: 1px solid var(--border); }
+    .schema-badge {
+      font-size: 10px;
+      line-height: 1;
+      height: 20px;
+      min-width: 86px;
+      padding: 0 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-sizing: border-box;
+      flex: 0 0 86px;
+      white-space: nowrap;
+    }
     .schema-badge.required { color: #ffd18b; border-color: #755a2f; background: rgba(117, 90, 47, 0.22); }
     .schema-badge.recommended { color: #9cd7ff; border-color: #2f5b75; background: rgba(47, 91, 117, 0.22); }
     .schema-badge.advanced { color: var(--muted); border-color: #2a3040; background: rgba(42, 48, 64, 0.25); }
@@ -394,6 +409,113 @@
       background: #0d111a;
     }
     button.schema-help { line-height: 1; }
+    .inspect-setting-chip {
+      display: inline-flex;
+      align-items: center;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 9px;
+      border: 1px solid #2a3348;
+      background: linear-gradient(180deg, rgba(18, 26, 43, 0.92), rgba(14, 20, 34, 0.88));
+      color: #c8d6ee;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: help;
+      transition: border-color .15s ease, background .15s ease, color .15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .inspect-setting-chip[data-tip]:hover,
+    .inspect-setting-chip[data-tip]:focus-visible {
+      border-color: #3b6f95;
+      background: linear-gradient(180deg, rgba(22, 35, 56, 0.96), rgba(16, 27, 44, 0.92));
+      color: var(--text);
+      outline: none;
+    }
+    .schema-setting-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-height: 26px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      border: 1px solid #2a3348;
+      background: linear-gradient(180deg, rgba(18, 26, 43, 0.92), rgba(14, 20, 34, 0.88));
+      color: #c8d6ee;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: help;
+      transition: border-color .15s ease, background .15s ease, color .15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+    }
+    .schema-setting-chip[data-tip]:hover,
+    .schema-setting-chip[data-tip]:focus-visible {
+      border-color: #3b6f95;
+      background: linear-gradient(180deg, rgba(22, 35, 56, 0.96), rgba(16, 27, 44, 0.92));
+      color: var(--text);
+      outline: none;
+    }
+    .selection-setting-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-height: 26px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      border: 1px solid #2a3348;
+      background: linear-gradient(180deg, rgba(18, 26, 43, 0.92), rgba(14, 20, 34, 0.88));
+      color: #c8d6ee;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: help;
+      transition: border-color .15s ease, background .15s ease, color .15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+    }
+    .selection-setting-chip[data-tip]:hover,
+    .selection-setting-chip[data-tip]:focus-visible {
+      border-color: #3b6f95;
+      background: linear-gradient(180deg, rgba(22, 35, 56, 0.96), rgba(16, 27, 44, 0.92));
+      color: var(--text);
+      outline: none;
+    }
+    .selection-op-group {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+    }
+    .selection-op-btn {
+      flex: 1 1 0;
+      min-width: 0;
+      width: auto;
+      white-space: nowrap;
+      min-height: 32px;
+      font-size: 11px;
+      line-height: 1.1;
+      padding: 6px 4px;
+      letter-spacing: 0;
+    }
+    .selection-op-btn.active {
+      border-color: rgba(90, 169, 255, 0.65);
+      background: rgba(90, 169, 255, 0.15);
+      color: #c8e5ff;
+    }
     .schema-field-row.advanced-hidden { display: none; }
     .schema-special-row .schema-label-wrap { align-self: flex-start; padding-top: 4px; }
     .schema-special-row textarea {
@@ -607,6 +729,23 @@
       flex: 1;
       min-width: 140px;
     }
+    .schema-card-description {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(13, 17, 26, 0.85);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+      padding: 8px 10px;
+      height: 46px;
+      overflow: hidden;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
     .schema-legacy-hidden { display: none !important; }
   </style>
 </head>
@@ -794,9 +933,10 @@
           <div class="card" id="schemaCreateCardPanel">
             <div class="card-content">
               <div class="schema-toolbar-row">
-                <div class="schema-toolbar-group schema-toolbar-card">
-                  <div class="row"><label>Card</label><select id="schemaCreateCard"></select></div>
-                </div>
+              <div class="schema-toolbar-group schema-toolbar-card">
+                <div class="row"><label>Card</label><select id="schemaCreateCard"></select></div>
+                <div id="schemaCreateCardDescription" class="schema-card-description">Select a card to view a short description.</div>
+              </div>
                 <div class="schema-toolbar-group">
                   <button id="btnSchemaCreateCard">Create Card</button>
                   <button id="btnSchemaClearCard">Clear</button>
@@ -943,9 +1083,10 @@
           <div class="card" id="schemaEditCardPanel">
             <div class="card-content">
               <div class="schema-toolbar-row">
-                <div class="schema-toolbar-group schema-toolbar-card">
-                  <div class="row"><label>Card</label><select id="schemaEditCard"></select></div>
-                </div>
+              <div class="schema-toolbar-group schema-toolbar-card">
+                <div class="row"><label>Card</label><select id="schemaEditCard"></select></div>
+                <div id="schemaEditCardDescription" class="schema-card-description">Select a card to view a short description.</div>
+              </div>
                 <div class="schema-toolbar-group">
                   <button id="btnSchemaApplyEdit">Apply Edit</button>
                   <button id="btnSchemaClearEdit">Clear</button>
@@ -1159,7 +1300,7 @@
     </section>
 
     <aside id="selectionSidebar">
-      <div class="card">
+      <div class="card" id="selectionCard">
         <div class="card-header"><h2>Selection</h2></div>
         <div class="card-content">
           <div class="row"><label>Entity</label>
@@ -1205,17 +1346,14 @@
             <button id="btnSelectAllType">Select all type</button>
             <button id="btnClearSelectionToolbar">Clear</button>
           </div>
-          <div class="row"><label>Op</label>
-            <select id="selOp">
-              <option value="replace" selected>Replace</option>
-              <option value="add">Add</option>
-              <option value="remove">Remove</option>
-              <option value="intersect">Intersect</option>
-            </select>
+          <div class="row">
+            <div id="selOpButtons" class="selection-op-group" role="group" aria-label="Selection operation">
+              <button type="button" class="selection-op-btn active" data-op="replace" aria-pressed="true" title="Replace current selection with incoming picks/list IDs.">Replace</button>
+              <button type="button" class="selection-op-btn" data-op="add" aria-pressed="false" title="Add incoming picks/list IDs to the current selection.">Add</button>
+              <button type="button" class="selection-op-btn" data-op="remove" aria-pressed="false" title="Remove incoming picks/list IDs from the current selection.">Remove</button>
+            </div>
           </div>
-          <div class="row"><label>ID(s)</label><input id="selNid" type="text" placeholder="e.g. 12, 14-20 (Enter)"></div>
           <div class="row" style="justify-content: space-between; gap: 8px;">
-            <button id="btnSelApply">Apply</button>
             <button id="btnSelCopy">Copy</button>
             <button id="btnSelPaste">Paste</button>
           </div>
@@ -1233,8 +1371,8 @@
           </div>
           <div class="row"><label>View</label>
             <select id="selListMode">
-              <option value="ranges" selected>Ranges</option>
-              <option value="list">List (max 1000)</option>
+              <option value="ranges">Ranges</option>
+              <option value="list" selected>List (max 1000)</option>
             </select>
           </div>
           <div class="row"><label>Labels</label>
@@ -1244,7 +1382,7 @@
             </label>
           </div>
           <div class="row"><label>List</label>
-            <textarea id="selList" rows="7" style="width:100%; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;" placeholder="Selection summary"></textarea>
+            <textarea id="selList" rows="7" style="width:100%; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;" placeholder="IDs/ranges, e.g. 101&#10;102&#10;200 THRU 250"></textarea>
           </div>
           <div class="row" style="justify-content: flex-end; gap: 8px;">
             <button id="btnSelApplyList">Apply List</button>
@@ -33437,9 +33575,6 @@ This will also delete any elements that reference them.`);
   var loadProgressLabel = document.getElementById("loadProgressLabel");
   var btnUndo = document.getElementById("btnUndo");
   var btnRedo = document.getElementById("btnRedo");
-  var selNid = document.getElementById("selNid");
-  var selOp = document.getElementById("selOp");
-  var btnSelApply = document.getElementById("btnSelApply");
   var btnSelCopy = document.getElementById("btnSelCopy");
   var btnSelPaste = document.getElementById("btnSelPaste");
   var btnSelClear = document.getElementById("btnSelClear");
@@ -33717,6 +33852,11 @@ This will also delete any elements that reference them.`);
   var btnSelectAllType = document.getElementById("btnSelectAllType");
   var selCountToolbar = document.getElementById("selCountToolbar");
   var btnClearSelectionToolbar = document.getElementById("btnClearSelectionToolbar");
+  var selOpButtonsWrap = document.getElementById("selOpButtons");
+  var selOpButtons = selOpButtonsWrap ? Array.from(selOpButtonsWrap.querySelectorAll(".selection-op-btn[data-op]")) : [];
+  var selectionOp = "replace";
+  var __selListDirty = false;
+  var __selListLastSnapshot = "";
   if (showNodeIds) showNodeIds.addEventListener("change", () => rebuildLabels());
   if (showElemIds) showElemIds.addEventListener("change", () => rebuildLabels());
   if (showSPCLabels) showSPCLabels.addEventListener("change", () => rebuildLabels());
@@ -33727,18 +33867,18 @@ This will also delete any elements that reference them.`);
     const selSelectedLabels = document.getElementById("selSelectedLabels");
     if (selSelectedLabels) selSelectedLabels.addEventListener("change", () => updateSelectedLabels());
     const selListMode = document.getElementById("selListMode");
-    let __selListDirty2 = false;
+    if (selListMode && !selListMode.value) selListMode.value = "list";
     if (selList) {
       selList.addEventListener("input", () => {
         try {
-          const m = selListMode && selListMode.value ? String(selListMode.value) : "ranges";
-          if (m === "list") __selListDirty2 = true;
+          const m = selListMode && selListMode.value ? String(selListMode.value) : "list";
+          if (m === "list") __selListDirty = true;
         } catch {
         }
       });
     }
     if (selListMode) selListMode.addEventListener("change", () => {
-      __selListDirty2 = false;
+      __selListDirty = false;
       updateSelectionUI();
     });
   }
@@ -33857,9 +33997,26 @@ This will also delete any elements that reference them.`);
     highlightSelectedElementVisual();
     updateSelectionUI();
   });
-  if (selOp) {
-    selectionManager.setOp(String(selOp.value || "replace"));
-    selOp.addEventListener("change", () => selectionManager.setOp(String(selOp.value || "replace")));
+  var normalizeSelectionOp = (raw) => {
+    const op = String(raw || "replace").toLowerCase();
+    return op === "add" || op === "remove" ? op : "replace";
+  };
+  var syncSelectionOpButtons = (rawOp) => {
+    const op = normalizeSelectionOp(rawOp);
+    selectionOp = op;
+    selectionManager.setOp(op);
+    for (const btn of selOpButtons) {
+      const isActive = String(btn.dataset.op || "") === op;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+  };
+  syncSelectionOpButtons(selectionOp);
+  for (const btn of selOpButtons) {
+    btn.addEventListener("click", () => {
+      const op = normalizeSelectionOp(btn.dataset.op || "replace");
+      syncSelectionOpButtons(op);
+    });
   }
   var btnExportSelectionCSV = document.getElementById("btnExportSelectionCSV");
   var btnImportSelectionCSV = document.getElementById("btnImportSelectionCSV");
@@ -34163,16 +34320,26 @@ This will also delete any elements that reference them.`);
     model.preLines = [];
     derivedPcompThicknessByPid = /* @__PURE__ */ new Map();
   }
+  async function ensureWorkerBackedModelForScratchBuild() {
+    if (workerModel && Array.isArray(workerModel.cardStream)) return true;
+    const seedDeck = "CEND\nBEGIN BULK\nENDDATA\n";
+    const parsed = await parseCardEngine(seedDeck, "new_model.dat", {}, { strictMode: false, exportMode: "flatten" });
+    const nextModel = parsed && parsed.model ? parsed.model : null;
+    if (!nextModel || !Array.isArray(nextModel.cardStream)) {
+      throw new Error("Failed to initialize worker-backed model for scratch build.");
+    }
+    workerModel = nextModel;
+    syncWorkerModelDebugRef();
+    indexWorkerCardStream(workerModel.cardStream);
+    return true;
+  }
   async function exportBDF() {
     if (!(typeof CARD_ENGINE_WORKER_SOURCE_B64 === "string" && CARD_ENGINE_WORKER_SOURCE_B64.length > 0)) {
       statusMsg("Worker not embedded. Run npm run editor:build and open dist/WebMeshEditor.html", true);
       return;
     }
-    if (!(workerModel && Array.isArray(workerModel.cardStream))) {
-      statusMsg("No model loaded.", true);
-      return;
-    }
     try {
+      await ensureWorkerBackedModelForScratchBuild();
       syncWorkerFromEditorModel();
       const text = await writeCardEngine(workerModel);
       const blob = new Blob([text], { type: "text/plain" });
@@ -34287,12 +34454,14 @@ This will also delete any elements that reference them.`);
   var btnSchemaToggleAdvanced = document.getElementById("btnSchemaToggleAdvanced");
   var btnSchemaCreateCard = document.getElementById("btnSchemaCreateCard");
   var btnSchemaClearCard = document.getElementById("btnSchemaClearCard");
+  var schemaCreateCardDescriptionEl = document.getElementById("schemaCreateCardDescription");
   var schemaEditCardSelect = document.getElementById("schemaEditCard");
   var schemaEditFieldsEl = document.getElementById("schemaEditFields");
   var btnSchemaEditUseSelection = document.getElementById("btnSchemaEditUseSelection");
   var btnSchemaEditToggleAdvanced = document.getElementById("btnSchemaEditToggleAdvanced");
   var btnSchemaApplyEdit = document.getElementById("btnSchemaApplyEdit");
   var btnSchemaClearEdit = document.getElementById("btnSchemaClearEdit");
+  var schemaEditCardDescriptionEl = document.getElementById("schemaEditCardDescription");
   var schemaEditHintEl = document.getElementById("schemaEditHint");
   var schemaCreateCardPanel = document.getElementById("schemaCreateCardPanel");
   var schemaEditCardPanel = document.getElementById("schemaEditCardPanel");
@@ -34344,6 +34513,40 @@ This will also delete any elements that reference them.`);
   ]);
   var SCHEMA_EDIT_SUPPORTED_CARDS = SCHEMA_CREATE_SUPPORTED_CARDS.slice();
   var SCHEMA_EDIT_ELEMENT_CARDS = new Set(SCHEMA_CREATE_ELEMENT_CARDS);
+  var SCHEMA_CARD_DESCRIPTIONS = {
+    GRID: "Defines a structural grid point with coordinates and optional analysis coordinate references.",
+    CQUAD4: "Four-node shell element for membrane and bending behavior on quadrilateral surfaces.",
+    CTRIA3: "Three-node shell element for membrane and bending behavior on triangular surfaces.",
+    CROD: "Two-node axial rod element that carries tension/compression and torsion through PROD.",
+    CBAR: "Two-node beam-like line element with orientation, offsets, and PBAR section properties.",
+    CBEAM: "Two-node beam element with rich section/orientation controls and PBEAM properties.",
+    CBUSH: "Generalized 1D spring/damper/connection element between two grids with PBUSH behavior.",
+    RBE2: "Rigid body constraint tying dependent grids to one independent grid by selected DOFs.",
+    RBE3: "Interpolation constraint distributing motion/loads from independent grids to a reference grid.",
+    CTETRA: "Solid tetrahedral continuum element for 3D stress/strain analysis (tetra connectivity).",
+    CHEXA: "Solid hexahedral continuum element for 3D stress/strain analysis (brick connectivity).",
+    FORCE: "Concentrated force load at a grid using magnitude and direction vector components.",
+    MOMENT: "Concentrated moment load at a grid using magnitude and direction vector components.",
+    PLOAD2: "Uniform pressure load applied to listed shell element IDs.",
+    PLOAD4: "Surface pressure load on shell/solid faces with optional corner pressure variation.",
+    LOAD: "Load-combination entry that scales and combines other load sets by SID references.",
+    SPC: "Single-point constraint with explicit grid, component set, and enforced displacement value.",
+    SPC1: "Single-point constraint using one component mask applied to a list/range of grid IDs.",
+    CORD2R: "Rectangular coordinate system defined by three reference points and optional RID.",
+    CORD1R: "Rectangular coordinate system defined directly by three existing grid point IDs.",
+    CORD1C: "Cylindrical coordinate system defined directly by three existing grid point IDs.",
+    CORD2C: "Cylindrical coordinate system defined by explicit reference-point coordinates.",
+    CORD2S: "Spherical coordinate system defined by explicit reference-point coordinates.",
+    PSHELL: "Shell property definition linking thickness and material terms for shell elements.",
+    PSOLID: "Solid property definition linking material and integration options for solid elements.",
+    PROD: "Rod property defining area/torsion/non-structural-mass parameters for CROD.",
+    PBAR: "Bar property defining area/inertia/torsion and stress-recovery terms for CBAR.",
+    PBUSH: "Bush property defining translational/rotational stiffness, damping, and recovery factors.",
+    PBEAM: "Beam property with end/station section data, shear factors, and optional offsets.",
+    PCOMP: "Composite laminate property with ply stack (MID/T/THETA/SOUT) and laminate options.",
+    MAT1: "Isotropic material entry defining elastic, density, thermal, and damping terms.",
+    CONM2: "Concentrated mass element with offset and inertia matrix components at a grid."
+  };
   var SCHEMA_MENU_GROUPS = [
     { key: "grid", label: "Grid", createCard: "GRID", editCard: "GRID", createCards: ["schemaCreateCardPanel"], editCards: ["schemaEditCardPanel"] },
     { key: "element", label: "Element", createCard: "CQUAD4", editCard: "CQUAD4", createCards: ["schemaCreateCardPanel"], editCards: ["schemaEditCardPanel"] },
@@ -34369,6 +34572,36 @@ This will also delete any elements that reference them.`);
     { key: "clipping", label: "Clipping", cards: ["inspectClippingCard"] },
     { key: "labels", label: "Labels", cards: ["inspectLabelsCard"] }
   ];
+  var INSPECT_SETTING_TOOLTIPS = {
+    symbolSize: "Scales static symbols, labels, and helper markers in the viewport.",
+    springSize: "Scales 1D center glyph symbols (CBUSH/CROD/CBAR/CBEAM).",
+    colorMode: "Controls element coloring by default colors, property ID, or shell thickness.",
+    thickness3dToggle: "Renders CROD/CBAR/CBEAM with 3D cylindrical thickness instead of simple lines.",
+    bgColor: "Sets the viewport background color.",
+    shadingToggle: "Toggles lit shading versus flat/basic color shading.",
+    parallelToggle: "Switches between orthographic (parallel) and perspective camera projection.",
+    upAxis: "Sets the scene up-axis orientation for view controls.",
+    showFreeEdges: "Highlights free shell edges shared by only one shell element.",
+    opacitySlider: "Adjusts global mesh surface transparency.",
+    clippingToggle: "Enables clipping plane section view.",
+    clipPlaneSelect: "Chooses the active clipping plane orientation.",
+    clipOffsetSlider: "Moves the clipping plane along its normal direction.",
+    showNodeIds: "Shows node ID labels in the viewport.",
+    showElemIds: "Shows element ID labels in the viewport.",
+    showSPCLabels: "Shows SPC component labels near constrained nodes.",
+    showLoadLabels: "Shows force/moment/load labels in the viewport.",
+    loadLabelMode: "Chooses load label style: resultant magnitude or component values."
+  };
+  var SELECTION_SETTING_TOOLTIPS = {
+    selEntity: "Select which entity type the toolbar operates on.",
+    selMethod: "Choose click behavior for entity picking.",
+    faceAngleDeg: "For By face selection, sets the face-growth angle threshold in degrees.",
+    elemTypeSelect: "Element type used by Select all type and type-based picking.",
+    selOpButtons: "How new picks/lists combine with current selection: Replace, Add, or Remove.",
+    selListMode: "Choose how selection IDs are shown and parsed in the list box.",
+    selSelectedLabels: "Shows labels only for currently selected entities.",
+    selList: "Selection ID list editor for bulk apply/copy/paste workflows."
+  };
   var FLYOUT_MENU_GROUPS = {
     inspect: INSPECT_MENU_GROUPS,
     create: SCHEMA_MENU_GROUPS.map((g) => ({ key: g.key, label: g.label, cards: g.createCards.slice(), schemaCard: g.createCard, schemaMode: "create" })),
@@ -35342,11 +35575,102 @@ This will also delete any elements that reference them.`);
       if (Number.isFinite(firstSelNode)) setIfBlank("g", firstSelNode);
     }
   }
+  function initInspectSettingTooltips() {
+    const inspectCardIds = ["inspectDisplayCard", "inspectVisibilityCard", "inspectClippingCard", "inspectLabelsCard"];
+    for (const cardId of inspectCardIds) {
+      const card = document.getElementById(cardId);
+      if (!card) continue;
+      const rows = card.querySelectorAll(".row");
+      for (const row of rows) {
+        const label = row.querySelector(":scope > label");
+        if (!label) continue;
+        const control = row.querySelector(":scope > input[id], :scope > select[id], :scope > button[id]");
+        if (!control || !control.id) continue;
+        label.classList.add("inspect-setting-chip");
+        const tip = INSPECT_SETTING_TOOLTIPS[String(control.id)] || "";
+        if (!tip) continue;
+        label.setAttribute("title", tip);
+        label.setAttribute("data-tip", tip);
+        label.setAttribute("aria-label", `${String(label.textContent || "").trim()}: ${tip}`);
+      }
+    }
+    const visGrid = document.getElementById("visToggleGrid");
+    if (visGrid) {
+      visGrid.querySelectorAll("button[data-vis]").forEach((btn) => {
+        const name = String(btn.textContent || btn.getAttribute("data-vis") || "").trim();
+        if (!name) return;
+        btn.setAttribute("title", `Show or hide ${name} entities in the viewport.`);
+      });
+    }
+  }
+  function schemaApplyFieldLabelTooltip(labelEl, tipText) {
+    if (!labelEl) return;
+    labelEl.classList.add("schema-setting-chip");
+    const tip = String(tipText == null ? "" : tipText).trim();
+    if (!tip) {
+      labelEl.removeAttribute("title");
+      labelEl.removeAttribute("data-tip");
+      return;
+    }
+    labelEl.setAttribute("title", tip);
+    labelEl.setAttribute("data-tip", tip);
+    const base = String(labelEl.textContent || "").trim();
+    labelEl.setAttribute("aria-label", base ? `${base}: ${tip}` : tip);
+  }
+  function schemaCardDescription(cardName) {
+    const upper = String(cardName || "").toUpperCase();
+    return SCHEMA_CARD_DESCRIPTIONS[upper] || `${upper}: bulk data card definition available in schema/card references.`;
+  }
+  function schemaUpdateCardDescription(mode, cardName) {
+    const el = mode === "create" ? schemaCreateCardDescriptionEl : schemaEditCardDescriptionEl;
+    if (!el) return;
+    const text = schemaCardDescription(cardName);
+    el.textContent = text;
+    el.setAttribute("title", text);
+  }
+  function initSelectionSettingTooltips() {
+    const selectionCard = document.getElementById("selectionCard");
+    if (!selectionCard) return;
+    const fallbackByLabel = {
+      entity: "selEntity",
+      method: "selMethod",
+      "face": "faceAngleDeg",
+      type: "elemTypeSelect",
+      op: "selOpButtons",
+      view: "selListMode",
+      labels: "selSelectedLabels",
+      list: "selList"
+    };
+    const rows = selectionCard.querySelectorAll(".row");
+    for (const row of rows) {
+      const label = row.querySelector(":scope > label");
+      if (!label) continue;
+      const raw = String(label.textContent || "").trim();
+      const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const directControl = row.querySelector(":scope > input[id], :scope > select[id], :scope > textarea[id], :scope > div[id], :scope > button[id]");
+      let key = directControl && directControl.id ? String(directControl.id) : "";
+      if (!key && normalized.startsWith("face")) key = "faceAngleDeg";
+      if (!key && normalized.startsWith("op")) key = "selOpButtons";
+      if (!key) key = fallbackByLabel[normalized] || "";
+      const tip = SELECTION_SETTING_TOOLTIPS[key] || "";
+      if (!tip) {
+        label.classList.remove("selection-setting-chip");
+        label.removeAttribute("title");
+        label.removeAttribute("data-tip");
+        continue;
+      }
+      label.classList.add("selection-setting-chip");
+      label.setAttribute("title", tip);
+      label.setAttribute("data-tip", tip);
+      label.setAttribute("aria-label", raw ? `${raw}: ${tip}` : tip);
+    }
+  }
   function schemaCreateRender() {
     if (!schemaCreateCardSelect || !schemaCreateFieldsEl) return;
     schemaCreateFieldsEl.innerHTML = "";
     const cardName = schemaCreateState.cardName;
     if (!cardName) return;
+    schemaUpdateCardDescription("create", cardName);
     if (!schemaCreateState.fields.length) {
       const warn2 = document.createElement("div");
       warn2.className = "row";
@@ -35381,18 +35705,12 @@ This will also delete any elements that reference them.`);
       labelWrap.className = "schema-label-wrap";
       const label = document.createElement("label");
       label.textContent = schemaCreateFriendlyFieldLabel(f.name);
-      label.style.width = "auto";
-      label.style.color = "var(--muted)";
+      schemaApplyFieldLabelTooltip(label, schemaCreateTooltip(cardName, f.name));
       labelWrap.appendChild(label);
       const badge = document.createElement("span");
       badge.className = `schema-badge ${tier}`;
       badge.textContent = tier === "required" ? "Required" : tier === "recommended" ? "Recommended" : "Advanced";
       labelWrap.appendChild(badge);
-      const help = document.createElement("span");
-      help.className = "schema-help";
-      help.textContent = "?";
-      help.title = schemaCreateTooltip(cardName, f.name);
-      labelWrap.appendChild(help);
       const input = document.createElement("input");
       const fieldInput = schemaCreateInputType(f.type);
       input.type = fieldInput.type;
@@ -35941,17 +36259,12 @@ This will also delete any elements that reference them.`);
       }
       const label = document.createElement("label");
       label.textContent = labelText;
+      schemaApplyFieldLabelTooltip(label, helpText);
       labelWrap.appendChild(label);
       const badge = document.createElement("span");
       badge.className = "schema-badge recommended";
       badge.textContent = badgeText || "Bulk";
       labelWrap.appendChild(badge);
-      const help = document.createElement("button");
-      help.type = "button";
-      help.className = "schema-help";
-      help.textContent = "?";
-      help.title = helpText;
-      labelWrap.appendChild(help);
       row.appendChild(labelWrap);
       const rhs = document.createElement("div");
       rhs.style.flex = "1";
@@ -37367,6 +37680,7 @@ This will also delete any elements that reference them.`);
     schemaEditFieldsEl.innerHTML = "";
     const cardName = schemaEditState.cardName;
     if (!cardName) return;
+    schemaUpdateCardDescription("modify", cardName);
     if (!schemaEditState.fields.length) {
       const warn2 = document.createElement("div");
       warn2.style.color = "var(--danger)";
@@ -37400,18 +37714,12 @@ This will also delete any elements that reference them.`);
       labelWrap.className = "schema-label-wrap";
       const label = document.createElement("label");
       label.textContent = schemaCreateFriendlyFieldLabel(f.name);
-      label.style.width = "auto";
-      label.style.color = "var(--muted)";
+      schemaApplyFieldLabelTooltip(label, schemaCreateTooltip(cardName, f.name));
       labelWrap.appendChild(label);
       const badge = document.createElement("span");
       badge.className = `schema-badge ${tier}`;
       badge.textContent = tier === "required" ? "Required" : tier === "recommended" ? "Recommended" : "Advanced";
       labelWrap.appendChild(badge);
-      const help = document.createElement("span");
-      help.className = "schema-help";
-      help.textContent = "?";
-      help.title = schemaCreateTooltip(cardName, f.name);
-      labelWrap.appendChild(help);
       row.appendChild(labelWrap);
       const input = document.createElement("input");
       const fieldInput = schemaCreateInputType(f.type);
@@ -38148,6 +38456,35 @@ This will also delete any elements that reference them.`);
     }
     if (!target) throw new Error(`No selected ${cardName} target found. Select one entity and try again.`);
     schemaEditPopulateFromTarget(cardName, target);
+  }
+  var schemaEditAutoSelectionKey = "";
+  function schemaEditSelectionKey() {
+    if (selection && selection.nodes && selection.nodes.size === 1) return `node:${Array.from(selection.nodes)[0]}`;
+    if (selection && selection.elems && selection.elems.size === 1) return `element:${Array.from(selection.elems)[0]}`;
+    if (selection && selection.props && selection.props.size === 1) return `property:${Array.from(selection.props)[0]}`;
+    if (selection && selection.loads && selection.loads.size === 1) return `load:${Array.from(selection.loads)[0]}`;
+    if (selection && selection.constraints && selection.constraints.size === 1) return `constraint:${Array.from(selection.constraints)[0]}`;
+    return "";
+  }
+  function schemaEditAutoSyncFromSelection() {
+    try {
+      const modifyActive = !!(modifyTab && modifyTab.classList.contains("active"));
+      if (!modifyActive) return;
+      if (!flyoutState || String(flyoutState.activeTab || "") !== "modify") return;
+      const grp = String(flyoutState.activeGroup || "");
+      if (!grp || grp.startsWith("transform_")) return;
+      if (!schemaEditCardPanel || schemaEditCardPanel.classList.contains("schema-legacy-hidden")) return;
+      const key = schemaEditSelectionKey();
+      if (!key) {
+        schemaEditAutoSelectionKey = "";
+        return;
+      }
+      const syncKey = `${String(schemaEditState.cardName || "").toUpperCase()}|${key}`;
+      if (syncKey === schemaEditAutoSelectionKey) return;
+      schemaEditApplySelection();
+      schemaEditAutoSelectionKey = syncKey;
+    } catch (e) {
+    }
   }
   function schemaEditValidateIdentity(cardName, parsed, target) {
     const upper = String(cardName || "").toUpperCase();
@@ -38934,7 +39271,7 @@ This will also delete any elements that reference them.`);
     drawGlyph(ctx);
     const texture = new CanvasTexture(canvas2);
     texture.needsUpdate = true;
-    const mat = new SpriteMaterial({ map: texture, sizeAttenuation: false, color: colorHex, transparent: true });
+    const mat = new SpriteMaterial({ map: texture, sizeAttenuation: true, color: colorHex, transparent: true });
     mat.depthTest = false;
     mat.depthWrite = false;
     mat.clippingPlanes = [clippingPlane];
@@ -41390,6 +41727,20 @@ This will also delete any elements that reference them.`);
       scene.add(selectedElemLines);
     }
   }
+  function selectionListSnapshot(modeEntity) {
+    if (modeEntity === "node") return `node:${uniqSorted(Array.from(selection.nodes)).join(",")}`;
+    if (modeEntity === "element") {
+      if (selectionManager.virtual.elems && selectionManager.virtual.elems.kind === "byType") {
+        const v = selectionManager.virtual.elems;
+        return `element_virtual:${String(v.type || "")}:${String(v.count || 0)}:${formatRanges(v.ranges || [], 500)}`;
+      }
+      return `element:${uniqSorted(Array.from(selection.elems)).join(",")}`;
+    }
+    if (modeEntity === "load") return `load:${Array.from(selection.loads).sort().join(",")}`;
+    if (modeEntity === "constraint") return `constraint:${Array.from(selection.constraints).sort().join(",")}`;
+    if (modeEntity === "property") return `property:${uniqSorted(Array.from(selection.props)).join(",")}`;
+    return "";
+  }
   function updateSelectionUI() {
     syncSelectModeFromUI();
     const modeEntity = String(selectionManager.state.mode || selectMode || "node");
@@ -41409,10 +41760,15 @@ This will also delete any elements that reference them.`);
       if (selCountToolbar) selCountToolbar.textContent = countText;
     }
     const isSingleNodeSelected = modeEntity === "node" && selection.nodes.size === 1;
-    nodeDetails.style.display = isSingleNodeSelected ? "" : "none";
+    if (nodeDetails) nodeDetails.style.display = isSingleNodeSelected ? "" : "none";
     try {
+      const snapshot = selectionListSnapshot(modeEntity);
+      if (snapshot !== __selListLastSnapshot) {
+        __selListLastSnapshot = snapshot;
+        __selListDirty = false;
+      }
       const selListMode = document.getElementById("selListMode");
-      const mode = selListMode && selListMode.value ? String(selListMode.value) : "ranges";
+      const mode = selListMode && selListMode.value ? String(selListMode.value) : "list";
       const wrap = document.getElementById("selTableWrap");
       const table = document.getElementById("selTable");
       if (wrap) wrap.style.display = "none";
@@ -41446,22 +41802,11 @@ ${formatRanges(v.ranges, 200)}`;
       updateSelectedLabels();
     } catch {
     }
-    const hasMultiNodeSelection = modeEntity === "node" && selection.nodes.size > 1;
-    if (hasMultiNodeSelection) {
-      selNid.value = "";
-      selNid.placeholder = "Multiple Selected";
-    } else if (selection.elems.size === 1) {
-      selNid.value = String(Array.from(selection.elems)[0]);
-    } else if (selection.elems.size > 1) {
-      selNid.value = "";
-      selNid.placeholder = "Multiple Selected";
-    }
     if (isSingleNodeSelected) {
       const nid = Array.from(selection.nodes)[0];
       const node = model.nodes.get(nid);
       const idx = model.nodeIndex.get(nid);
       if (node && idx !== void 0) {
-        selNid.value = String(nid);
         selX.value = node.x;
         selY.value = node.y;
         selZ.value = node.z;
@@ -41472,13 +41817,10 @@ ${formatRanges(v.ranges, 200)}`;
         selCP.value = node.cp || 0;
         selCD.value = node.cd || 0;
       }
-    } else if (selection.nodes.size === 0 && selection.elems.size === 0) {
-      selNid.value = "";
-      selNid.placeholder = "Find by ID (Enter)";
     }
     const showElemEdit = modeEntity === "element" && selection.elems.size === 1;
-    editElemCard.style.display = showElemEdit ? "" : "none";
-    if (showElemEdit) {
+    if (editElemCard) editElemCard.style.display = showElemEdit ? "" : "none";
+    if (showElemEdit && editElemCard) {
       const eid = Array.from(selection.elems)[0];
       let elem;
       for (const type in model.elems) {
@@ -41518,6 +41860,10 @@ ${formatRanges(v.ranges, 200)}`;
       }
     }
     updateMeasureUI();
+    try {
+      schemaEditAutoSyncFromSelection();
+    } catch {
+    }
   }
   function updateMeasureUI() {
     const resultsEl = document.getElementById("measureResults");
@@ -41909,14 +42255,24 @@ ${formatRanges(v.ranges, 200)}`;
     if (ev && Number.isFinite(ev.button) && ev.button !== 0) return;
     if (Date.now() < polygonIgnoreClickUntil) return;
     if (ev.altKey) return;
+    if (!boxSelecting && !dragStart && selectRect && selectRect.style.display !== "none") {
+      selectRect.style.display = "none";
+    }
     if (boxSelecting) {
-      dragStart = null;
-      boxSelecting = false;
-      if (selectRect) selectRect.style.display = "none";
-      if (controls && !isPolygonSelecting) controls.enabled = true;
+      clearBoxSelectionDrag();
       return;
     }
     if (isPolygonSelecting) {
+      if (Number(ev.detail || 1) >= 2) {
+        try {
+          ev.preventDefault();
+          ev.stopPropagation();
+        } catch {
+        }
+        finalizePolygonSelection();
+        polygonIgnoreClickUntil = Date.now() + 250;
+        return;
+      }
       addPolygonPoint(ev);
       return;
     }
@@ -42215,6 +42571,7 @@ ${formatRanges(v.ranges, 200)}`;
     }
   }
   function onDoubleClick(ev) {
+    if (Date.now() < polygonIgnoreClickUntil) return;
     if (isPolygonSelecting) {
       try {
         ev.preventDefault();
@@ -42380,6 +42737,8 @@ ${formatRanges(v.ranges, 200)}`;
   }
   initPanelLayoutControls();
   initSchemaFlyoutMenus();
+  initInspectSettingTooltips();
+  initSelectionSettingTooltips();
   initSchemaCreateEngine().catch((e) => {
     console.error("initSchemaCreateEngine failed", e);
     statusMsg("Schema create engine failed to initialize.", true);
@@ -42669,7 +43028,7 @@ ENDDATA d6351085
       highlightSelectedElementVisual();
       updateSelectionUI();
       const editElemCard = document.getElementById("editElementCard");
-      if (selectMode !== "element" && editElemCard.style.display !== "none") {
+      if (selectMode !== "element" && editElemCard && editElemCard.style.display !== "none") {
         editElemCard.style.display = "none";
       }
     });
@@ -42703,65 +43062,72 @@ ENDDATA d6351085
     const pointsStr = polygonPoints.map((p) => `${p.x},${p.y}`).join(" ");
     polygonLine.setAttribute("points", pointsStr);
   }
-  function cancelPolygonSelection() {
+  function cancelPolygonSelection(options = {}) {
+    const silent = !!(options && options.silent);
     isPolygonSelecting = false;
     controls.enabled = true;
     polygonPoints = [];
     polygonOverlay.style.display = "none";
     polygonLine.setAttribute("points", "");
-    statusMsg("Polygon selection cancelled.");
+    if (!silent) statusMsg("Polygon selection cancelled.");
   }
   function finalizePolygonSelection() {
-    if (polygonPoints.length < 3) {
-      cancelPolygonSelection();
-      return;
-    }
-    syncSelectModeFromUI();
-    const rectCanvas = canvas.getBoundingClientRect();
-    const selectedInPolygon = /* @__PURE__ */ new Set();
-    const isPointInPolygon = (point, vs) => {
-      const x = point.x, y = point.y;
-      let inside = false;
-      for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-        const xi = vs[i].x, yi = vs[i].y;
-        const xj = vs[j].x, yj = vs[j].y;
-        const intersect2 = yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
-        if (intersect2) inside = !inside;
+    try {
+      if (polygonPoints.length < 3) {
+        cancelPolygonSelection();
+        return;
       }
-      return inside;
-    };
-    const projectToScreen = (vec3) => {
-      const p = vec3.clone().project(camera);
-      return { x: (p.x * 0.5 + 0.5) * rectCanvas.width, y: (-p.y * 0.5 + 0.5) * rectCanvas.height };
-    };
-    if (selectMode === "node") {
-      for (let i = 0; i < model.indexToNid.length; i++) {
-        const screenPos = projectToScreen(nodePosition(i));
-        if (isPointInPolygon(screenPos, polygonPoints)) {
-          selectedInPolygon.add(model.indexToNid[i]);
+      syncSelectModeFromUI();
+      const rectCanvas = canvas.getBoundingClientRect();
+      const selectedInPolygon = /* @__PURE__ */ new Set();
+      const isPointInPolygon = (point, vs) => {
+        const x = point.x, y = point.y;
+        let inside = false;
+        for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+          const xi = vs[i].x, yi = vs[i].y;
+          const xj = vs[j].x, yj = vs[j].y;
+          const intersect2 = yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
+          if (intersect2) inside = !inside;
         }
-      }
-      selectionManager.setMode("node");
-      selectionManager.setNodes(Array.from(selectedInPolygon));
-    } else if (selectMode === "element") {
-      const allElems = Object.values(model.elems).flat();
-      for (const elem of allElems) {
-        if (hidden.elems && hidden.elems.has(elem.eid)) continue;
-        const nodes = elem.n || [elem.gn, ...elem.deps || elem.inds];
-        const centroid = centroidOf(nodes);
-        const screenPos = projectToScreen(centroid);
-        if (isPointInPolygon(screenPos, polygonPoints)) {
-          selectedInPolygon.add(elem.eid);
+        return inside;
+      };
+      const projectToScreen = (vec3) => {
+        const p = vec3.clone().project(camera);
+        return { x: (p.x * 0.5 + 0.5) * rectCanvas.width, y: (-p.y * 0.5 + 0.5) * rectCanvas.height };
+      };
+      if (selectMode === "node") {
+        for (let i = 0; i < model.indexToNid.length; i++) {
+          const screenPos = projectToScreen(nodePosition(i));
+          if (isPointInPolygon(screenPos, polygonPoints)) {
+            selectedInPolygon.add(model.indexToNid[i]);
+          }
         }
+        selectionManager.setMode("node");
+        selectionManager.setNodes(Array.from(selectedInPolygon));
+      } else if (selectMode === "element") {
+        const allElems = Object.values(model.elems).flat();
+        for (const elem of allElems) {
+          if (hidden.elems && hidden.elems.has(elem.eid)) continue;
+          const nodes = elem.n || [elem.gn, ...elem.deps || elem.inds];
+          const centroid = centroidOf(nodes);
+          const screenPos = projectToScreen(centroid);
+          if (isPointInPolygon(screenPos, polygonPoints)) {
+            selectedInPolygon.add(elem.eid);
+          }
+        }
+        selectionManager.setMode("element");
+        selectionManager.setElems(Array.from(selectedInPolygon));
       }
-      selectionManager.setMode("element");
-      selectionManager.setElems(Array.from(selectedInPolygon));
+      updateSelectionVisual();
+      highlightSelectedElementVisual();
+      updateSelectionUI();
+      statusMsg(`Selected ${selectedInPolygon.size} items with polygon.`);
+    } catch (e) {
+      console.error(e);
+      statusMsg("Polygon selection failed (see console).", true);
+    } finally {
+      cancelPolygonSelection({ silent: true });
     }
-    updateSelectionVisual();
-    highlightSelectedElementVisual();
-    updateSelectionUI();
-    statusMsg(`Selected ${selectedInPolygon.size} items with polygon.`);
-    cancelPolygonSelection();
   }
   function clearBoxSelectionDrag() {
     dragStart = null;
@@ -42770,52 +43136,61 @@ ENDDATA d6351085
     if (controls && !isPolygonSelecting) controls.enabled = true;
   }
   function finalizeBoxSelection(ev) {
-    if (!dragStart) {
+    if (!dragStart || !boxSelecting) {
       clearBoxSelectionDrag();
       return;
     }
-    syncSelectModeFromUI();
-    const rect = viewportEl.getBoundingClientRect(), endX = ev.clientX - rect.left, endY = ev.clientY - rect.top;
-    const x1 = Math.min(dragStart.x, endX), x2 = Math.max(dragStart.x, endX), y1 = Math.min(dragStart.y, endY), y2 = Math.max(dragStart.y, endY);
-    const rectCanvas = canvas.getBoundingClientRect();
-    if (selectMode === "node") {
-      if (points) {
-        const selectedInBox = [];
-        for (let i = 0; i < model.indexToNid.length; i++) {
-          const p = nodePosition(i).clone().project(camera);
-          const sx = (p.x + 1) * 0.5 * rectCanvas.width, sy = (1 - p.y) * 0.5 * rectCanvas.height;
-          if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
-            selectedInBox.push(model.indexToNid[i]);
+    try {
+      const vx = Number.isFinite(ev && ev.clientX) ? ev.clientX : viewportEl.getBoundingClientRect().left + dragStart.x;
+      const vy = Number.isFinite(ev && ev.clientY) ? ev.clientY : viewportEl.getBoundingClientRect().top + dragStart.y;
+      syncSelectModeFromUI();
+      const rect = viewportEl.getBoundingClientRect(), endX = vx - rect.left, endY = vy - rect.top;
+      const x1 = Math.min(dragStart.x, endX), x2 = Math.max(dragStart.x, endX), y1 = Math.min(dragStart.y, endY), y2 = Math.max(dragStart.y, endY);
+      const rectCanvas = canvas.getBoundingClientRect();
+      if (x2 - x1 < 2 || y2 - y1 < 2) return;
+      if (selectMode === "node") {
+        if (points) {
+          const selectedInBox = [];
+          for (let i = 0; i < model.indexToNid.length; i++) {
+            const p = nodePosition(i).clone().project(camera);
+            const sx = (p.x + 1) * 0.5 * rectCanvas.width, sy = (1 - p.y) * 0.5 * rectCanvas.height;
+            if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+              selectedInBox.push(model.indexToNid[i]);
+            }
           }
+          selectionManager.setMode("node");
+          selectionManager.setNodes(selectedInBox);
+          updateSelectionVisual();
+          updateSelectionUI();
         }
-        selectionManager.setMode("node");
-        selectionManager.setNodes(selectedInBox);
+      } else if (selectMode === "element") {
+        const selectedElems = /* @__PURE__ */ new Set();
+        const projectToScreen = (vec3) => {
+          const p = vec3.clone().project(camera);
+          return { sx: (p.x + 1) * 0.5 * rectCanvas.width, sy: (1 - p.y) * 0.5 * rectCanvas.height };
+        };
+        const checkElem = (e) => {
+          if (hidden.elems && hidden.elems.has(e.eid)) return;
+          const nodes = e.n || [e.gn, ...e.deps || e.inds];
+          const centroid = centroidOf(nodes);
+          const { sx, sy } = projectToScreen(centroid);
+          if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
+            selectedElems.add(e.eid);
+          }
+        };
+        Object.values(model.elems).flat().forEach(checkElem);
+        selectionManager.setMode("element");
+        selectionManager.setElems(Array.from(selectedElems));
         updateSelectionVisual();
+        highlightSelectedElementVisual();
         updateSelectionUI();
       }
-    } else if (selectMode === "element") {
-      const selectedElems = /* @__PURE__ */ new Set();
-      const projectToScreen = (vec3) => {
-        const p = vec3.clone().project(camera);
-        return { sx: (p.x + 1) * 0.5 * rectCanvas.width, sy: (1 - p.y) * 0.5 * rectCanvas.height };
-      };
-      const checkElem = (e) => {
-        if (hidden.elems && hidden.elems.has(e.eid)) return;
-        const nodes = e.n || [e.gn, ...e.deps || e.inds];
-        const centroid = centroidOf(nodes);
-        const { sx, sy } = projectToScreen(centroid);
-        if (sx >= x1 && sx <= x2 && sy >= y1 && sy <= y2) {
-          selectedElems.add(e.eid);
-        }
-      };
-      Object.values(model.elems).flat().forEach(checkElem);
-      selectionManager.setMode("element");
-      selectionManager.setElems(Array.from(selectedElems));
-      updateSelectionVisual();
-      highlightSelectedElementVisual();
-      updateSelectionUI();
+    } catch (e) {
+      console.error(e);
+      statusMsg("Box selection failed (see console).", true);
+    } finally {
+      clearBoxSelectionDrag();
     }
-    clearBoxSelectionDrag();
   }
   if (canvas && selectRect) {
     canvas.addEventListener("mousedown", (ev) => {
@@ -42824,6 +43199,7 @@ ENDDATA d6351085
         ev.preventDefault();
         return;
       }
+      if (ev.button !== 0) return;
       if (!ev.altKey) return;
       const rect = viewportEl.getBoundingClientRect();
       dragStart = { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
@@ -42877,29 +43253,17 @@ ENDDATA d6351085
     });
   }
   var getSelectionInputText = () => {
-    try {
-      const lm = document.getElementById("selListMode");
-      const mode = lm && lm.value ? String(lm.value) : "ranges";
-      if (mode === "list" && selList) return String(selList.value || "").trim();
-    } catch {
-    }
-    return selNid ? String(selNid.value || "").trim() : "";
+    return selList ? String(selList.value || "").trim() : "";
   };
   var setSelectionInputText = (text) => {
     const s = String(text || "");
-    try {
-      const lm = document.getElementById("selListMode");
-      const mode = lm && lm.value ? String(lm.value) : "ranges";
-      if (mode === "list" && selList) {
-        selList.value = s;
-        __selListDirty = false;
-      }
-    } catch {
+    if (selList) {
+      selList.value = s;
+      __selListDirty = false;
     }
-    if (selNid) selNid.value = s;
   };
   var applySelectionFromInput = async () => {
-    if (!selNid && !selList) return;
+    if (!selList) return;
     syncSelectModeFromUI();
     const text = getSelectionInputText();
     if (!text) return;
@@ -42909,8 +43273,7 @@ ENDDATA d6351085
       return;
     }
     __selListDirty = false;
-    const op = selOp && selOp.value ? String(selOp.value) : "replace";
-    selectionManager.setOp(op);
+    selectionManager.setOp(normalizeSelectionOp(selectionOp));
     try {
       const mode = String(selectionManager.state.mode || selectMode || "node");
       if (mode === "node") {
@@ -42957,15 +43320,6 @@ ENDDATA d6351085
       updateSelectionUI();
     }
   };
-  if (selNid) {
-    selNid.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        applySelectionFromInput();
-      }
-    });
-  }
-  if (btnSelApply) btnSelApply.addEventListener("click", () => applySelectionFromInput());
   {
     const btnSelApplyList = document.getElementById("btnSelApplyList");
     if (btnSelApplyList) btnSelApplyList.addEventListener("click", async () => {
@@ -42994,7 +43348,7 @@ ENDDATA d6351085
     try {
       syncSelectModeFromUI();
       const selListMode = document.getElementById("selListMode");
-      const mode = selListMode && selListMode.value ? String(selListMode.value) : "ranges";
+      const mode = selListMode && selListMode.value ? String(selListMode.value) : "list";
       let txt = "";
       if (mode === "list") {
         const ent = String(selectionManager.state.mode || selectMode || "node");
@@ -43116,8 +43470,7 @@ ${formatRanges(v.ranges, 500)}`;
     try {
       let pids = uniqSorted(Array.from(selection.props || []));
       if (!pids.length) {
-        const typed = selNid && selNid.value ? String(selNid.value) : "";
-        pids = uniqSorted(parseIdList(typed));
+        pids = uniqSorted(parseIdList(getSelectionInputText()));
       }
       if (!pids.length) {
         statusMsg("No properties selected.", true);
@@ -43133,8 +43486,7 @@ ${formatRanges(v.ranges, 500)}`;
         statusMsg("No elements found for selected properties.", true);
         return;
       }
-      const op = selOp && selOp.value ? String(selOp.value) : "replace";
-      selectionManager.setOp(op);
+      selectionManager.setOp(normalizeSelectionOp(selectionOp));
       selectionManager.setMode("element");
       selectionManager.setElems(eids);
       try {
@@ -43268,8 +43620,9 @@ ${formatRanges(v.ranges, 500)}`;
         }
       },
       applyIds: async (text) => {
-        if (selNid) selNid.value = String(text || "");
-        if (btnSelApply) btnSelApply.click();
+        setSelectionInputText(String(text || ""));
+        const btnSelApplyList = document.getElementById("btnSelApplyList");
+        if (btnSelApplyList) btnSelApplyList.click();
         await new Promise((r) => setTimeout(r, 0));
       },
       click: (id) => {
@@ -43434,9 +43787,21 @@ ${formatRanges(v.ranges, 500)}`;
     pendingIncludeVfs = {};
     hideEntryChooser();
     historyManager.recordAction(() => {
+      clearWorkerCaches();
       resetModel();
+      selection.nodes.clear();
+      selection.elems.clear();
+      selection.loads.clear();
+      selection.constraints.clear();
+      selection.props.clear();
+      clearModelTreeHoverVisual();
+      if (modelTreeContainer) modelTreeContainer.innerHTML = "";
       clearScene();
+      updateSelectionVisual();
+      highlightSelectedElementVisual();
+      updateSelectionUI();
       refreshCounts();
+      populateModelTree();
       statusMsg("Cleared model.");
     });
   });
@@ -43558,13 +43923,17 @@ ${formatRanges(v.ranges, 500)}`;
       statusMsg(`Updated element ${eid}.`);
       buildGeometries(true);
     });
-    document.getElementById("editElementCard").style.display = "none";
+    {
+      const card = document.getElementById("editElementCard");
+      if (card) card.style.display = "none";
+    }
     selection.elems.clear();
     updateSelectionUI();
     highlightSelectedElementVisual();
   });
   btnCancelElemEdit.addEventListener("click", () => {
-    document.getElementById("editElementCard").style.display = "none";
+    const card = document.getElementById("editElementCard");
+    if (card) card.style.display = "none";
     selection.elems.clear();
     updateSelectionUI();
     highlightSelectedElementVisual();
@@ -44988,55 +45357,267 @@ ${formatRanges(v.ranges, 500)}`;
   document.getElementById("btnRefineMesh").addEventListener("click", () => {
     historyManager.recordAction(() => {
       try {
-        const selElems = [...selection.elems].map((eid) => Object.values(model.elems).flat().find((e) => e.eid === eid)).filter((e) => e && (e.type === "CQUAD4" || e.type === "CTRIA3"));
-        if (selElems.length === 0) throw new Error("No shell elements selected to refine.");
+        const SUPPORTED = /* @__PURE__ */ new Set(["CQUAD4", "CTRIA3", "CHEXA", "CTETRA"]);
+        const allElems = Object.values(model.elems).flat();
+        const eidToElem = /* @__PURE__ */ new Map();
+        for (const elem of allElems) {
+          if (!elem || !Number.isFinite(Number(elem.eid))) continue;
+          eidToElem.set(Number(elem.eid), elem);
+        }
+        const selectedByEid = /* @__PURE__ */ new Map();
+        if (selectionManager && selectionManager.virtual && selectionManager.virtual.elems && selectionManager.virtual.elems.kind === "byType") {
+          const wanted = String(selectionManager.virtual.elems.type || "").toUpperCase();
+          if (SUPPORTED.has(wanted)) {
+            for (const elem of allElems) {
+              if (!elem) continue;
+              if (String(elem.type || "").toUpperCase() !== wanted) continue;
+              selectedByEid.set(Number(elem.eid), elem);
+            }
+          }
+        }
+        for (const eid of selection.elems) {
+          const elem = eidToElem.get(Number(eid));
+          if (elem) selectedByEid.set(Number(elem.eid), elem);
+        }
+        const selElems = Array.from(selectedByEid.values()).filter((elem) => SUPPORTED.has(String(elem.type || "").toUpperCase()));
+        if (selElems.length === 0) throw new Error("No supported elements selected to refine (CQUAD4/CTRIA3/CTETRA/CHEXA).");
+        const { globalPositions } = resolveAllTransforms();
         let { maxNid, maxEid } = getHighestIds();
-        const midNodeCache = /* @__PURE__ */ new Map();
+        const edgeMidCache = /* @__PURE__ */ new Map();
+        const faceCenterCache = /* @__PURE__ */ new Map();
+        const removeByType = /* @__PURE__ */ new Map();
+        let refinedCount = 0;
+        let addedElemCount = 0;
+        let skippedCount = 0;
+        let skippedHighOrderSolids = 0;
+        const newElemIds = [];
+        const getGlobal = (nid) => {
+          const p = globalPositions.get(Number(nid));
+          if (!p) throw new Error(`Node ${nid} has unresolved global position (CP/RID chain unresolved).`);
+          return p;
+        };
+        const meanOfNodes = (nids) => {
+          let sx = 0, sy = 0, sz = 0;
+          for (const nid of nids) {
+            const p = getGlobal(nid);
+            sx += p.x;
+            sy += p.y;
+            sz += p.z;
+          }
+          const inv = 1 / nids.length;
+          return new Vector3(sx * inv, sy * inv, sz * inv);
+        };
+        const createNodeAtGlobal = (point) => {
+          const nid = ++maxNid;
+          model.nodes.set(nid, { x: point.x, y: point.y, z: point.z, cp: 0 });
+          globalPositions.set(nid, point.clone());
+          return nid;
+        };
+        const edgeKey = (a, b) => {
+          const n1 = Number(a), n2 = Number(b);
+          return n1 < n2 ? `${n1}-${n2}` : `${n2}-${n1}`;
+        };
+        const faceKey = (nids) => {
+          const ids = Array.from(new Set((Array.isArray(nids) ? nids : []).map((v) => Number(v))));
+          ids.sort((a, b) => a - b);
+          return ids.join("-");
+        };
         const getOrCreateMidNode = (nid1, nid2) => {
-          const key = nid1 < nid2 ? `${nid1}-${nid2}` : `${nid2}-${nid1}`;
-          if (midNodeCache.has(key)) return midNodeCache.get(key);
-          const node1 = model.nodes.get(nid1);
-          const node2 = model.nodes.get(nid2);
-          const newNid2 = ++maxNid;
-          model.nodes.set(newNid2, { x: (node1.x + node2.x) / 2, y: (node1.y + node2.y) / 2, z: (node1.z + node2.z) / 2, cp: node1.cp });
-          midNodeCache.set(key, newNid2);
-          return newNid2;
+          const key = edgeKey(nid1, nid2);
+          if (edgeMidCache.has(key)) return edgeMidCache.get(key);
+          const p1 = getGlobal(nid1);
+          const p2 = getGlobal(nid2);
+          const nid = createNodeAtGlobal(new Vector3(
+            (p1.x + p2.x) * 0.5,
+            (p1.y + p2.y) * 0.5,
+            (p1.z + p2.z) * 0.5
+          ));
+          edgeMidCache.set(key, nid);
+          return nid;
+        };
+        const getOrCreateFaceCenterNode = (nids) => {
+          const key = faceKey(nids);
+          if (faceCenterCache.has(key)) return faceCenterCache.get(key);
+          const nid = createNodeAtGlobal(meanOfNodes(nids));
+          faceCenterCache.set(key, nid);
+          return nid;
+        };
+        const tetSignedVolume = (a, b, c, d) => {
+          const p1 = getGlobal(a), p2 = getGlobal(b), p3 = getGlobal(c), p4 = getGlobal(d);
+          const v1 = p2.clone().sub(p1);
+          const v2 = p3.clone().sub(p1);
+          const v3 = p4.clone().sub(p1);
+          return v1.dot(v2.cross(v3));
+        };
+        const orientTet = (nodes) => {
+          const n = Array.isArray(nodes) ? nodes.slice() : [];
+          if (n.length !== 4) return n;
+          if (tetSignedVolume(n[0], n[1], n[2], n[3]) < 0) {
+            const tmp = n[1];
+            n[1] = n[2];
+            n[2] = tmp;
+          }
+          return n;
+        };
+        const addElem = (typeKey, typeName, pid, nodes) => {
+          const eid = ++maxEid;
+          model.elems[typeKey].push({ eid, pid, n: nodes, type: typeName });
+          newElemIds.push(eid);
+          addedElemCount++;
+          return eid;
+        };
+        const markForDelete = (elem) => {
+          const typeKey = elementArrayKeyForType(elem.type);
+          if (!typeKey || !model.elems[typeKey]) return;
+          if (!removeByType.has(typeKey)) removeByType.set(typeKey, /* @__PURE__ */ new Set());
+          removeByType.get(typeKey).add(Number(elem.eid));
         };
         for (const elem of selElems) {
-          if (elem.type === "CQUAD4") {
-            const [n1, n2, n3, n4] = elem.n;
+          const type = String(elem.type || "").toUpperCase();
+          const nodes = Array.isArray(elem.n) ? elem.n.map((v) => Number(v)).filter(Number.isFinite) : [];
+          const pid = Number.isFinite(Number(elem.pid)) ? Number(elem.pid) : 1;
+          if (type === "CQUAD4") {
+            if (nodes.length !== 4) {
+              skippedCount++;
+              continue;
+            }
+            const [n1, n2, n3, n4] = nodes;
             const n5 = getOrCreateMidNode(n1, n2);
             const n6 = getOrCreateMidNode(n2, n3);
             const n7 = getOrCreateMidNode(n3, n4);
             const n8 = getOrCreateMidNode(n4, n1);
-            const n9 = ++maxNid;
-            const p1 = model.nodes.get(n1), p2 = model.nodes.get(n2), p3 = model.nodes.get(n3), p4 = model.nodes.get(n4);
-            model.nodes.set(n9, { x: (p1.x + p2.x + p3.x + p4.x) / 4, y: (p1.y + p2.y + p3.y + p4.y) / 4, z: (p1.z + p2.z + p3.z + p4.z) / 4, cp: p1.cp });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n1, n5, n9, n8], type: "CQUAD4" });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n5, n2, n6, n9], type: "CQUAD4" });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n9, n6, n3, n7], type: "CQUAD4" });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n8, n9, n7, n4], type: "CQUAD4" });
-          } else {
-            const [n1, n2, n3] = elem.n;
-            const p1 = model.nodes.get(n1), p2 = model.nodes.get(n2), p3 = model.nodes.get(n3);
+            const n9 = getOrCreateFaceCenterNode([n1, n2, n3, n4]);
+            addElem("quad", "CQUAD4", pid, [n1, n5, n9, n8]);
+            addElem("quad", "CQUAD4", pid, [n5, n2, n6, n9]);
+            addElem("quad", "CQUAD4", pid, [n9, n6, n3, n7]);
+            addElem("quad", "CQUAD4", pid, [n8, n9, n7, n4]);
+            markForDelete(elem);
+            refinedCount++;
+            continue;
+          }
+          if (type === "CTRIA3") {
+            if (nodes.length !== 3) {
+              skippedCount++;
+              continue;
+            }
+            const [n1, n2, n3] = nodes;
             const n4 = getOrCreateMidNode(n1, n2);
             const n5 = getOrCreateMidNode(n2, n3);
             const n6 = getOrCreateMidNode(n3, n1);
-            const n7 = ++maxNid;
-            model.nodes.set(n7, { x: (p1.x + p2.x + p3.x) / 3, y: (p1.y + p2.y + p3.y) / 3, z: (p1.z + p2.z + p3.z) / 3, cp: p1.cp });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n1, n4, n7, n6], type: "CQUAD4" });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n4, n2, n5, n7], type: "CQUAD4" });
-            model.elems.quad.push({ eid: ++maxEid, pid: elem.pid, n: [n6, n7, n5, n3], type: "CQUAD4" });
+            const n7 = getOrCreateFaceCenterNode([n1, n2, n3]);
+            addElem("quad", "CQUAD4", pid, [n1, n4, n7, n6]);
+            addElem("quad", "CQUAD4", pid, [n4, n2, n5, n7]);
+            addElem("quad", "CQUAD4", pid, [n6, n7, n5, n3]);
+            markForDelete(elem);
+            refinedCount++;
+            continue;
           }
-          const typeKey = elem.type === "CTRIA3" ? "tri" : "quad";
-          const index = model.elems[typeKey].findIndex((e) => e.eid === elem.eid);
-          if (index > -1) model.elems[typeKey].splice(index, 1);
+          if (type === "CHEXA") {
+            if (nodes.length !== 8) {
+              skippedHighOrderSolids++;
+              continue;
+            }
+            const [n1, n2, n3, n4, n5, n6, n7, n8] = nodes;
+            const m12 = getOrCreateMidNode(n1, n2);
+            const m23 = getOrCreateMidNode(n2, n3);
+            const m34 = getOrCreateMidNode(n3, n4);
+            const m41 = getOrCreateMidNode(n4, n1);
+            const m56 = getOrCreateMidNode(n5, n6);
+            const m67 = getOrCreateMidNode(n6, n7);
+            const m78 = getOrCreateMidNode(n7, n8);
+            const m85 = getOrCreateMidNode(n8, n5);
+            const m15 = getOrCreateMidNode(n1, n5);
+            const m26 = getOrCreateMidNode(n2, n6);
+            const m37 = getOrCreateMidNode(n3, n7);
+            const m48 = getOrCreateMidNode(n4, n8);
+            const f1234 = getOrCreateFaceCenterNode([n1, n2, n3, n4]);
+            const f5678 = getOrCreateFaceCenterNode([n5, n6, n7, n8]);
+            const f1265 = getOrCreateFaceCenterNode([n1, n2, n6, n5]);
+            const f2376 = getOrCreateFaceCenterNode([n2, n3, n7, n6]);
+            const f3487 = getOrCreateFaceCenterNode([n3, n4, n8, n7]);
+            const f4158 = getOrCreateFaceCenterNode([n4, n1, n5, n8]);
+            const c = createNodeAtGlobal(meanOfNodes([n1, n2, n3, n4, n5, n6, n7, n8]));
+            addElem("hex", "CHEXA", pid, [n1, m12, f1234, m41, m15, f1265, c, f4158]);
+            addElem("hex", "CHEXA", pid, [m12, n2, m23, f1234, f1265, m26, f2376, c]);
+            addElem("hex", "CHEXA", pid, [f1234, m23, n3, m34, c, f2376, m37, f3487]);
+            addElem("hex", "CHEXA", pid, [m41, f1234, m34, n4, f4158, c, f3487, m48]);
+            addElem("hex", "CHEXA", pid, [m15, f1265, c, f4158, n5, m56, f5678, m85]);
+            addElem("hex", "CHEXA", pid, [f1265, m26, f2376, c, m56, n6, m67, f5678]);
+            addElem("hex", "CHEXA", pid, [c, f2376, m37, f3487, f5678, m67, n7, m78]);
+            addElem("hex", "CHEXA", pid, [f4158, c, f3487, m48, m85, f5678, m78, n8]);
+            markForDelete(elem);
+            refinedCount++;
+            continue;
+          }
+          if (type === "CTETRA") {
+            if (nodes.length !== 4) {
+              skippedHighOrderSolids++;
+              continue;
+            }
+            const [n1, n2, n3, n4] = nodes;
+            const m12 = getOrCreateMidNode(n1, n2);
+            const m13 = getOrCreateMidNode(n1, n3);
+            const m14 = getOrCreateMidNode(n1, n4);
+            const m23 = getOrCreateMidNode(n2, n3);
+            const m24 = getOrCreateMidNode(n2, n4);
+            const m34 = getOrCreateMidNode(n3, n4);
+            const diagCandidates = [
+              [m12, m34],
+              [m13, m24],
+              [m14, m23]
+            ];
+            let diag = diagCandidates[0];
+            let bestLen = Infinity;
+            for (const candidate of diagCandidates) {
+              const pA = getGlobal(candidate[0]);
+              const pB = getGlobal(candidate[1]);
+              const len2 = pA.distanceToSquared(pB);
+              if (len2 < bestLen) {
+                bestLen = len2;
+                diag = candidate;
+              }
+            }
+            const core = [];
+            if (diag[0] === m12 && diag[1] === m34) {
+              core.push([m12, m13, m14, m34], [m12, m14, m24, m34], [m12, m24, m23, m34], [m12, m23, m13, m34]);
+            } else if (diag[0] === m13 && diag[1] === m24) {
+              core.push([m13, m12, m14, m24], [m13, m14, m34, m24], [m13, m34, m23, m24], [m13, m23, m12, m24]);
+            } else {
+              core.push([m14, m12, m13, m23], [m14, m13, m34, m23], [m14, m34, m24, m23], [m14, m24, m12, m23]);
+            }
+            const children = [
+              [n1, m12, m13, m14],
+              [m12, n2, m23, m24],
+              [m13, m23, n3, m34],
+              [m14, m24, m34, n4],
+              ...core
+            ];
+            for (const child of children) {
+              addElem("tet", "CTETRA", pid, orientTet(child));
+            }
+            markForDelete(elem);
+            refinedCount++;
+            continue;
+          }
+        }
+        for (const [typeKey, eidSet] of removeByType.entries()) {
+          const arr = model.elems[typeKey];
+          if (!Array.isArray(arr) || eidSet.size === 0) continue;
+          model.elems[typeKey] = arr.filter((e) => !eidSet.has(Number(e.eid)));
         }
         const nidsArr = Array.from(model.nodes.keys()).sort((a, b) => a - b);
         model.indexToNid = nidsArr;
         model.nodeIndex = new Map(nidsArr.map((nid, i) => [nid, i]));
+        if (newElemIds.length > 0) {
+          selection.elems = new Set(newElemIds);
+          updateSelectionUI();
+        }
         buildGeometries(true);
-        statusMsg(`Refined ${selElems.length} elements.`);
+        trySyncWorkerGridsFromEditorModel();
+        let msg = `Refined ${refinedCount} element(s) into ${addedElemCount} element(s).`;
+        if (skippedCount > 0) msg += ` Skipped ${skippedCount} malformed shell(s).`;
+        if (skippedHighOrderSolids > 0) msg += ` Skipped ${skippedHighOrderSolids} high-order solid(s) (only CTETRA4/CHEXA8 are supported).`;
+        statusMsg(msg);
       } catch (e) {
         statusMsg(e.message, true);
         console.error(e);
@@ -45462,14 +46043,32 @@ ${formatRanges(v.ranges, 500)}`;
       const dist = camera.position.distanceTo(controls.target);
       const zoomFactor = camera && camera.isOrthographicCamera ? Math.max(1e-6, Number(camera.zoom) || 1) : 1;
       const meshScaleFactor = dist * 7e-3 / zoomFactor;
-      const spriteViewportFactor = 1 / zoomFactor;
+      const viewportH = Math.max(1, Number(renderer && renderer.domElement && renderer.domElement.clientHeight) || window.innerHeight || 1);
+      const glyphPixelFactor = 120;
+      const __tmpObjPos = new Vector3();
       const updateSymbolScale = (obj) => {
         if (!obj || !obj.userData || !obj.userData.isStaticSymbol) return;
         const base = Number(obj.userData.baseScale || 1);
         const control = obj.userData.scaleControl === "spring" ? springScale : symbolScale;
         if (!(control > 0) || !(base > 0)) return;
-        const factor = obj.userData.viewportLockedSprite ? spriteViewportFactor : meshScaleFactor;
-        const newScale = factor * base * control;
+        let newScale = 0;
+        if (obj.userData.viewportLockedSprite) {
+          let worldPerPixel = 0;
+          if (camera && camera.isOrthographicCamera) {
+            worldPerPixel = Math.abs((camera.top - camera.bottom) / (Math.max(1e-6, camera.zoom) * viewportH));
+          } else if (camera && camera.isPerspectiveCamera) {
+            obj.getWorldPosition(__tmpObjPos);
+            const d = Math.max(1e-6, camera.position.distanceTo(__tmpObjPos));
+            const fovRad = MathUtils.degToRad(Number(camera.fov) || 50);
+            worldPerPixel = 2 * Math.tan(fovRad * 0.5) * d / viewportH;
+          } else {
+            worldPerPixel = meshScaleFactor;
+          }
+          const targetPixels = base * control * glyphPixelFactor;
+          newScale = targetPixels * worldPerPixel;
+        } else {
+          newScale = meshScaleFactor * base * control;
+        }
         if (newScale > 1e-5) obj.scale.set(newScale, newScale, newScale);
       };
       for (const child of forceGroup.children) updateSymbolScale(child);
