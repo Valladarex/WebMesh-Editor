@@ -1,93 +1,114 @@
-# WebMesh Editor
+# WebMesh Editor v2.0.00
 
-A lightweight, in-browser editor for viewing, modifying, and creating simple Nastran (.dat, .bdf) finite element models. This tool is a single, self-contained HTML file with no server-side dependencies, making it easy to run offline or host on any static web server.
+WebMesh Editor is a single-file, browser-based Nastran deck viewer/editor for `.dat` and `.bdf` models.
 
-[LiveDemo(viaGitHubPages)](https://valladarex.github.io/WebMesh-Editor/WebMeshEditor.html)
+## Major Upgrades Since v1.0.00
 
-## Key Features
+### 1) UI/UX Re-architecture
+- Replaced the long-scroll sidebar workflow with static left-lane menus and viewport flyout panels.
+- Added full Inspect/Create/Modify flyout flows with lock/unlock behavior.
+- Added layout controls to hide/show left sidebar, right sidebar, and status dock.
+- Reduced nested scroll behavior and improved panel density/readability.
+- Added dedicated `Material` lane in create/modify workflows.
 
-#### Visualization & Display
-* 3D Viewport: Interactively rotate, pan, and zoom complex finite element models.
-* Display Customization: Toggle visibility for individual entity types, switch to property-based coloring, adjust symbol sizes, change background color, and enable smooth shading.
-* Clipping Plane Tool: Slice the model along XY, YZ, or XZ planes to inspect internal geometry.
-* Parallel View: Switch between a perspective and an orthographic (parallel) camera for easier alignment checks.
-* Dynamic Camera Pivot: Double-click anywhere on the model to set the camera's rotation pivot point.
-* Label Culling: Intelligently hides overlapping labels to prevent visual clutter on dense models.
+### 2) File Ingest + INCLUDE Resolution
+- Added multi-file and folder loading paths for model + dependency ingestion.
+- Added entry-deck chooser when multiple candidate `.dat/.bdf` files are found.
+- Added INCLUDE-aware loading with virtual file system (VFS) handling.
+- Added support for nested INCLUDEs and multiline INCLUDE path parsing.
+- Added path-resolution fallback behavior for root/subfolder deck layouts.
+- Added include-depth protection and clearer status feedback for include failures.
 
-#### Modeling & Editing
-* Entity Creation: Add new Nodes (GRID), Elements (CQUAD4, CTRIA3, CBAR, etc.), Coordinate Systems (CORD2R), Loads (FORCE, MOMENT), and Constraints (SPC1).
-* Interactive Editing: Click to select entities, use Alt+Drag for box selection, and use Ctrl+Shift+Drag for polygon selection.
-* Advanced Coordinate Systems: Full support for parsing, visualizing, creating, and exporting nested CORD2R local coordinate systems.
-* Undo/Redo: Full history support for all model modification actions.
-* Copy Node Coordinates: Easily copy the coordinates from a selected node when creating a new one.
+### 3) Schema Card Engine (Create + Modify)
+- Replaced hardcoded create/modify forms with schema-driven field rendering.
+- Added field-tier behavior (`Required`, `Recommended`, `Advanced`) and advanced-toggle control.
+- Added card-category filtering so each menu shows relevant cards only.
+- Modify path now applies targeted field updates (surgical edit behavior) instead of blanket delete/recreate.
 
-#### Transform Tools
-* Linear Move & Copy: Translate or duplicate selections by a specific vector or by picking two nodes.
-* Radial Move & Copy: Rotate or create circular patterns around a defined axis.
-* Reflect: Mirror selections across a standard or user-defined plane.
-* Mesh Refinement: Perform a 1-to-4 subdivision on selected shell elements to increase mesh density.
-* Node Merging: Find and merge coincident nodes within a user-defined tolerance.
+### 4) Expanded End-to-End Card Support
+- Parse/hydrate/edit/write coverage expanded across core card families, including:
+  - `GRID`, `CORD1R/C`, `CORD2R/C/S`
+  - `CTRIA3`, `CQUAD4`, `CTETRA`, `CHEXA`, `CPENTA`, `CPYRAM`
+  - `CROD`, `CBAR`, `CBEAM`, `CBUSH`, `RBE2`, `RBE3`
+  - `PSHELL`, `PSOLID`, `PROD`, `PBAR`, `PBEAM`, `PBUSH`, `PCOMP`, `MAT1`
+  - `FORCE`, `MOMENT`, `LOAD`, `PLOAD2`, `PLOAD4`, `SPC`, `SPC1`, `CONM2`
 
-#### Inspection & Navigation
-* Find by ID: Type a Node or Element ID in the selection panel and press Enter to find and highlight it.
-* Model Tree: View a hierarchical summary of all entities in the model.
-* Measurement Tools:
-* 2 Nodes Selected: Shows the distance and ΔX, ΔY, ΔZ.
-* 3 Nodes Selected: Shows the angle between them.
-* Multiple Elements: Calculates the total area and centroid.
-* Free Edge Display: Toggle a visual aid that highlights gaps or tears in a shell mesh.
+### 5) Selection Tool Overhaul
+- Unified selection manager across entities: nodes/elements/loads/constraints/properties.
+- Added selection methods for element workflows: by normal, by face, by element type.
+- Added operation modes: replace, add, remove, intersect.
+- Added range/list apply modes with selection copy/paste support.
+- Added selection transforms:
+  - nodes-from-elements
+  - elements-from-nodes
+  - select-elements-by-property
+- Improved selection-state stability (including Alt+drag teardown paths).
 
-## How to Use
+### 6) Model Tree + Context Menu Upgrades
+- Model tree now supports richer type-group interaction and capped ID expansion.
+- Hovering IDs can preview entities in the viewport.
+- Right-click menu supports more consistent edit and delete operations.
+- Improved entity routing for context actions (elements, properties, loads, constraints).
 
-#### Live Version (Recommended)
-The easiest way to use the editor is via the GitHub Pages link above.
+### 7) Spreadsheet/CSV Data Exchange
+- Added Excel-friendly **Schema CSV** import/export for selected card data.
+- Added CSV workflows for selected node data updates.
+- Added Nastran card-token CSV import/export paths for controlled bulk edits.
+- CSV flows preserve card identity (`card + id`) and support upsert behavior.
 
-#### Local Version
-Download the latest .html file from the repository and open it in a modern web browser.
+### 8) Large-Input Card Editors
+- Added PCOMP layup table editing (row-based ply workflows).
+- Added RBE large-node-list editing with append/replace/remove operations.
+- Added bulk target-grid workflows for load/constraint card creation.
+
+### 9) Transform and Utilities
+- Split transform workflows into dedicated tools:
+  - Linear Transform
+  - Radial Transform
+  - Reflect
+  - Utilities
+- Improved transform behavior for non-global coordinate-system cases.
+- Expanded copy/reflect behavior across shells, solids, 1D elements, and rigid elements.
+
+### 10) Visualization + Display Improvements
+- Added/updated 1D center glyphs:
+  - `CBUSH` spring glyph
+  - `CROD` circle glyph
+  - `CBAR` square glyph
+  - `CBEAM` I-section glyph
+- Improved property-driven element-face highlighting.
+- Fixed UI/label layering so flyouts and labels render correctly.
+- Made symbol/glyph size behavior viewport-relative for zoom stability.
+- Updated default visual baseline tuning for symbol and spring size controls.
+
+### 11) Export/Format Reliability
+- Improved deterministic short/long/free format handling.
+- Improved continuation handling and semantic-preserving export for supported cards.
+- Reduced semantic drift in blank/default-sensitive fields (notably PCOMP workflows).
+
+### 12) Sample and Distribution Behavior
+- Updated the embedded sample model used by `Load sample`.
+- Distribution remains single-file and offline-friendly.
 
 ## Controls
+
 | Action | Control |
 | :--- | :--- |
 | Rotate | Left Mouse Button + Drag |
-| Pan | Right Mouse Button + Drag |
+| Pan | Ctrl + Left Mouse Button + Drag |
 | Zoom | Mouse Wheel |
 | Pick Entity | Left Mouse Click |
-| Box Select | Alt Key + Left Mouse Drag |
-| Polygon Select | Ctrl + Shift + Left Mouse Drag |
+| Box Select | Alt + Left Mouse Drag |
+| Polygon Select | Ctrl + Shift + Left Mouse Click |
 | Set Pivot | Double-Click on Model |
 | Context Menu | Right Mouse Click on an entity |
 
-## Future Development Roadmap
-The current version provides a solid foundation for viewing and simple editing. The long-term vision is to evolve this tool into a more powerful, lightweight pre-processor.
+## Usage
 
-#### 1. Core Modeling & Meshing
-* 3D Element Support: Add parsing, rendering, and creation support for CHEXA, CPENTA, CTETRA, and CPYRA solid elements.
-* Advanced Meshing Tools:
-* ~~Translate/Copy: Duplicate selections with a linear offset.~~(Completed in v0.98) 
-* ~~Radial Copy: Duplicate selections around a center point and axis.~~(Completed in v0.98)
-* ~~Reflect: Mirror selections across a defined plane.~~(Completed in v0.98)
-* ~~Mesh Refinement: Subdivide existing shell elements to increase mesh density locally.~~(Completed in v0.98)
-* ~~Node Merging: A utility to find and merge duplicate nodes within a given tolerance.~~(Completed in v0.98)
+### Live Version
+[LiveDemo(viaGitHubPages)](https://valladarex.github.io/WebMesh-Editor/WebMeshEditor.html)
 
-#### 2. Visualization & User Interaction
-* Camera & View Controls:
-* ~~Parallel Projection: Implement an OrthographicCamera mode for checking alignments.~~ (Completed in v0.80)
-* ~~Dynamic Rotation Center: Snap the camera's pivot point to the entity under the cursor or a selected node.~~ (Completed in v0.80)
-* Rendering Performance Optimizations:
-* Instancing: Use InstancedMesh for rendering nodes and other repeated symbols to dramatically improve performance on large models.
-* ~~Label Culling: Implement an algorithm to prevent labels from overlapping, ensuring readability.~~ (Completed in v-0.80)
-* Progressive Loading: Use Web Workers to parse large files in the background without freezing the UI.
+### Local Version
+Open `WebMeshEditor.html` (or `dist/WebMeshEditor.html`) directly in a modern browser.
 
-#### 3. User Interface & Experience (UI/UX)
-* ~~Collapsible Panes: Allow sidebar sections to be collapsed to save space.~~ (Completed in v0.80)
-* ~~Search & Filter: Add a search bar to find entities by ID.~~ (Completed in v0.98)
-* Model Groups/Layers: Implement a system for users to create named groups of elements for easier visibility management.
-* Hotkeys: Add keyboard shortcuts for common actions.
-
-#### 4. Data & Compatibility
-* Full Property/Material Support: Add UI panels and logic to create and edit PSHELL, PBAR, MAT1, etc.
-* Long-Format Support: Implement import and export for 16-character field format cards.
-* Export Selection: Allow exporting only the currently selected entities.
-
-## Contributing
-Bug reports, feature requests, and pull requests are welcome. If you find an issue or have an idea for an improvement, please open an issue in the repository's "Issues" tab.
+No server process is required.
