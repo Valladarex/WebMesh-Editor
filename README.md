@@ -1,6 +1,28 @@
-# WebMesh Editor v2.0.00
+# WebMesh Editor v2.1
 
 WebMesh Editor is a single-file, browser-based Nastran deck viewer/editor for `.dat` and `.bdf` models.
+
+## New in v2.1 — MYSTRAN Post-Processing (F06)
+
+- Added **Analysis Results (MYSTRAN only)** workflow in Inspect mode.
+- Added F06 parsing for:
+  - nodal displacements (`T1/T2/T3`, total magnitude)
+  - shell/solid/beam stress extraction with contour support
+  - local element stress table components (Normal-X/Normal-Y/Shear-XY/Principal Major/Principal Minor/Shear-XZ/Shear-YZ/Von Mises where present)
+- Added deformed-shape visualization with animation controls (`Play/Pause/Stop`, FPS, Speed).
+- Added contour controls:
+  - continuous/discrete coloring
+  - color bin count
+  - auto/manual min-max range
+  - reverse palette option
+- Added criteria overlays:
+  - element criteria labels
+  - node mode for displacement with direction arrows
+  - configurable number formatting (scientific/real and sig figs)
+- Added advanced legend controls:
+  - viewport-anchored legend
+  - manual text-size control
+  - per-level tick labels matching contour formatting
 
 ## Major Upgrades Since v1.0.00
 
