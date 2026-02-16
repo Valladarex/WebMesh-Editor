@@ -32519,7 +32519,25 @@ void main() {
   }
   function ensureWorkerBackedModelReady() {
     if (!workerModel || !Array.isArray(workerModel.cardStream)) {
-      throw new Error("No worker-backed model loaded. Load a .dat/.bdf first.");
+      workerModel = {
+        cardStream: [
+          { kind: "raw", raw: "CEND" },
+          { kind: "raw", raw: "BEGIN BULK" },
+          { kind: "card", name: "ENDDATA", fmt: "small", tokens: ["ENDDATA"] }
+        ],
+        indexes: {
+          nodes: /* @__PURE__ */ new Map(),
+          elements: /* @__PURE__ */ new Map(),
+          properties: /* @__PURE__ */ new Map(),
+          materials: /* @__PURE__ */ new Map(),
+          masses: /* @__PURE__ */ new Map(),
+          loads: /* @__PURE__ */ new Map(),
+          constraints: /* @__PURE__ */ new Map(),
+          coords: /* @__PURE__ */ new Map()
+        }
+      };
+      syncWorkerModelDebugRef();
+      indexWorkerCardStream(workerModel.cardStream);
     }
   }
   function upsertGridRecordFromModel(nid, node) {
@@ -32677,35 +32695,6 @@ void main() {
       rec.lineTokens = [];
       rec.lineSlices = [];
       return;
-    }
-    const allowCreateNew = /* @__PURE__ */ new Set([
-      // Elements
-      "CROD",
-      "CBAR",
-      "CBEAM",
-      "CBUSH",
-      "CTETRA",
-      "CHEXA",
-      "CPENTA",
-      "CPYRAM",
-      "RBE2",
-      "RBE3",
-      // Properties/materials
-      "PBAR",
-      "PBUSH",
-      "PBEAM",
-      "PCOMP",
-      "PROD",
-      "MAT1",
-      // Coordinate systems
-      "CORD2R",
-      "CORD2C",
-      "CORD2S",
-      "CORD1R",
-      "CORD1C"
-    ]);
-    if (!allowCreateNew.has(upperName)) {
-      throw new Error(`Cannot create new ${upperName} records in worker-backed export yet.`);
     }
     const newRec = { kind: "card", name: upperName, fmt: "small", tokens, source: { file: "<editor>", line: 0 } };
     insertCardBeforeEnddata(newRec);
@@ -32878,8 +32867,20 @@ This will also delete any elements that reference them.`);
       });
     }
   }
-  function syncWorkerFromEditorModel() {
+  function syncWorkerFromEditorModel(warningSink = null) {
     ensureWorkerBackedModelReady();
+    const warn2 = (msg, err = null) => {
+      let full = String(msg || "").trim();
+      if (err) {
+        const em = err && err.message ? String(err.message) : String(err);
+        if (em) full = `${full}: ${em}`;
+      }
+      if (typeof warningSink === "function") {
+        warningSink(full);
+      } else {
+        console.warn(full);
+      }
+    };
     try {
       if (workerModel && workerModel.indexes) {
         const nextNodes = /* @__PURE__ */ new Map();
@@ -32938,7 +32939,7 @@ This will also delete any elements that reference them.`);
       }
     } catch (e) {
       console.warn("syncWorkerFromEditorModel: GRID index sync failed", e);
-      throw e;
+      warn2("GRID index sync warning", e);
     }
     try {
       if (workerModel && workerModel.indexes && workerModel.indexes.constraints && typeof workerModel.indexes.constraints.get === "function") {
@@ -33055,7 +33056,7 @@ This will also delete any elements that reference them.`);
       }
     } catch (e) {
       console.warn("syncWorkerFromEditorModel: coordinate sync failed", e);
-      throw e;
+      warn2("Coordinate sync warning", e);
     }
     try {
       if (workerModel && workerModel.indexes && workerModel.indexes.loads && typeof workerModel.indexes.loads.get === "function") {
@@ -33245,7 +33246,7 @@ This will also delete any elements that reference them.`);
       }
     } catch (e) {
       console.warn("syncWorkerFromEditorModel: FORCE/MOMENT/PLOAD2/PLOAD4/LOAD sync failed", e);
-      throw e;
+      warn2("Load sync warning", e);
     }
     try {
       const asInt = (v, label) => {
@@ -33592,7 +33593,7 @@ This will also delete any elements that reference them.`);
       }
     } catch (e) {
       console.warn("syncWorkerFromEditorModel: targeted element sync failed", e);
-      throw e;
+      warn2("Element sync warning", e);
     }
     try {
       const asInt = (v, label) => {
@@ -34010,7 +34011,7 @@ This will also delete any elements that reference them.`);
       }
     } catch (e) {
       console.warn("syncWorkerFromEditorModel: targeted property/material/mass sync failed", e);
-      throw e;
+      warn2("Property/material/mass sync warning", e);
     }
     for (const [nid, node] of model.nodes) {
       upsertGridRecordFromModel(nid, node);
@@ -34046,7 +34047,7 @@ This will also delete any elements that reference them.`);
         }
       }
       if (required) {
-        throw new Error(`${label}: missing/invalid required orientation`);
+        warn2(`${label}: missing/invalid required orientation`);
       }
       return ["", "", ""];
     };
@@ -34442,38 +34443,29 @@ This will also delete any elements that reference them.`);
     }
     for (const [mid, mat] of model.materials) {
       if (!mat || String(mat.type || "").toUpperCase() !== "MAT1") continue;
-      const key = `MAT1:${String(mid)}`;
-      const rec = workerCards.byKey.get(key) || null;
-      if (!rec || !Array.isArray(rec.tokens)) {
-        throw new Error(`Cannot sync MAT1 MID ${mid}: source MAT1 card not found in worker card stream.`);
-      }
       const nuVal = mat.nu ?? mat.Nu;
       if (!Number.isFinite(Number(mat.E)) || !Number.isFinite(Number(nuVal))) {
-        throw new Error(`Cannot sync MAT1 MID ${mid}: E and NU must be finite.`);
+        warn2(`Cannot sync MAT1 MID ${mid}: E and NU must be finite.`);
+        continue;
       }
       const toFloatOrBlank = (v) => Number.isFinite(Number(v)) ? asFloatToken(v) : "";
       const toIntOrBlank = (v) => Number.isFinite(Number(v)) ? asIntToken(v) : "";
-      const next = rec.tokens.slice();
-      while (next.length < 13) next.push("");
-      next[0] = "MAT1";
-      next[1] = asIntToken(mid);
-      next[2] = asFloatToken(mat.E);
-      next[3] = toFloatOrBlank(mat.G);
-      next[4] = asFloatToken(nuVal);
-      next[5] = toFloatOrBlank(mat.rho);
-      next[6] = toFloatOrBlank(mat.a);
-      next[7] = toFloatOrBlank(mat.tref);
-      next[8] = toFloatOrBlank(mat.ge);
-      next[9] = toFloatOrBlank(mat.st);
-      next[10] = toFloatOrBlank(mat.sc);
-      next[11] = toFloatOrBlank(mat.ss);
-      next[12] = toIntOrBlank(mat.mcsid);
-      rec.kind = "card";
-      rec.name = "MAT1";
-      rec.fmt = rec.fmt || "small";
-      rec.tokens = next;
-      rec.lineTokens = [];
-      rec.lineSlices = [];
+      const tokens = [
+        "MAT1",
+        asIntToken(mid),
+        asFloatToken(mat.E),
+        toFloatOrBlank(mat.G),
+        asFloatToken(nuVal),
+        toFloatOrBlank(mat.rho),
+        toFloatOrBlank(mat.a),
+        toFloatOrBlank(mat.tref),
+        toFloatOrBlank(mat.ge),
+        toFloatOrBlank(mat.st),
+        toFloatOrBlank(mat.sc),
+        toFloatOrBlank(mat.ss),
+        toIntOrBlank(mat.mcsid)
+      ];
+      upsertSimpleIdCardTokens("MAT1", mid, tokens);
     }
     const nodeIds = new Set(Array.from(model.nodes.keys()).map((v) => Number(v)));
     const triIds = new Set(model.elems.tri.map((e) => Number(e.eid)));
@@ -35576,10 +35568,43 @@ This will also delete any elements that reference them.`);
       return;
     }
     try {
+      const exportWarnings = [];
+      const pushExportWarning = (msg) => {
+        const s = String(msg ?? "").trim();
+        if (!s) return;
+        exportWarnings.push(s);
+        statusMsg(`Export warning: ${s}`, true);
+      };
       await ensureWorkerBackedModelForScratchBuild();
-      syncWorkerFromEditorModel();
+      syncWorkerFromEditorModel(pushExportWarning);
       const text = await writeCardEngine(workerModel);
-      const blob = new Blob([text], { type: "text/plain" });
+      if (exportWarnings.length > 0) {
+        const shown = exportWarnings.slice(0, 12);
+        const extra = exportWarnings.length > shown.length ? `
+...and ${exportWarnings.length - shown.length} more warning(s).` : "";
+        const prompt = [
+          `Export generated ${exportWarnings.length} warning(s):`,
+          shown.map((w, i) => `${i + 1}. ${w}`).join("\n"),
+          `${extra}
+
+Press OK to override warnings and continue export, or Cancel to abort.`
+        ].join("\n");
+        const proceed = confirm(prompt);
+        if (!proceed) {
+          statusMsg("Export canceled by user due to warnings.", true);
+          return;
+        }
+      }
+      const warningHeader = exportWarnings.length ? [
+        "$ ==================================================================",
+        `$ EXPORT WARNINGS (${exportWarnings.length})`,
+        "$ Generated by WebMeshEditor during export override.",
+        ...exportWarnings.map((w) => `$ WARNING: ${String(w).replace(/\r?\n/g, " ")}`),
+        "$ ==================================================================",
+        ""
+      ].join("\n") : "";
+      const finalText = warningHeader + text;
+      const blob = new Blob([finalText], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
