@@ -1,8 +1,62 @@
-# WebMesh Editor v2.1
+﻿# WebMesh Editor v2.2
 
 WebMesh Editor is a single-file, browser-based Nastran deck viewer/editor for `.dat` and `.bdf` models.
 
-## New in v2.1 — MYSTRAN Post-Processing (F06)
+## New in v2.2 - Changes Since v2.1
+
+### 1) Large-Model Performance Recovery and Architecture Cleanup
+- Reworked the large-model path around the forced SoA/core payload direction so small and large models stay on the same architecture.
+- Added M8 baseline capture, forensic reporting, and deterministic regression coverage for render, coordinate, and clipping failures.
+- Restored full filled-surface rendering for large decks instead of partial/wireframe-only behavior.
+- Reduced large-model interaction cost by moving more truth to worker/core payload data and tightening main-thread selection/render paths.
+- Added targeted regressions for:
+  - coordinate truth (`tests/test_m8_p1_coord_contract.mjs`)
+  - large render parity (`tests/test_m8_p2_render_parity.mjs`)
+  - clipping/pick/select behavior (`tests/test_m8_p3_clip_selection.mjs`)
+
+### 2) Clipping, Pick-Front, and Selection Fidelity
+- Rebuilt clip-active element picking so visible front faces win instead of clipped-away/internal geometry.
+- Restored box select, polygon select, `Show only`, and selected-subset rendering on the large model path.
+- Fixed clipped selection so hidden entities behind the clipping plane no longer win point picks.
+- Added front-visible node picking behavior so node picks stay aligned with what the user can actually see.
+- Fixed clipping-plane UI and control issues:
+  - actual default plane now matches the UI selector
+  - numeric offset display is normalized to `.001`
+  - numeric spinner arrows move in `0.1` increments
+
+### 3) Viewport and Visual Fidelity Fixes
+- Models now frame correctly on load/reset instead of opening off-screen or at unusable targets.
+- 1D glyphs now respect depth occlusion instead of drawing through front geometry.
+- Fixed glyph and clipping-plane viewport inconsistencies that made the scene look wrong even when geometry was correct.
+- Added skybox support and related display controls.
+
+### 4) Coordinate-System and Geometry Corrections
+- Restored nested/local coordinate-system parity using explicit global node positions in the core payload.
+- Fixed render-time coordinate resolution so local-coordinate nodes land in the correct global positions again.
+- Corrected preserve-view geometry behavior after regressions in post-crash recovery work.
+
+### 5) Post-Processing and Export Fixes
+- Fixed MYSTRAN/F06 output handling beyond the original v2.1 release.
+- Enabled support for STRESS, FORCE, GPFORCES, MPCFORCES, OLOAD, STRAIN
+- Fixed `.dat` export behavior after the v2.1 release.
+- Continued tightening deterministic export/roundtrip behavior while preserving the single-file offline workflow.
+
+### 6) Reliability, Guardrails, and Auditability
+- Hardened the read-gate proof system with signed metadata, freshness checks, similarity checks, and dedicated tests.
+- Added post-crash audit, remediation, and performance forensic documentation so major regressions are tracked with evidence.
+- Added watchdog and artifact-check tooling for long-running M8 performance work.
+
+### 7) Release Scope Summary
+- v2.2 is primarily a stability, performance, and interaction-fidelity release on top of v2.1.
+- The biggest user-visible upgrades since v2.1 are:
+  - large-model filled rendering restored
+  - clipping and front-pick behavior fixed
+  - coordinate-system regressions corrected
+  - viewport framing and glyph occlusion fixed
+  - skybox support added
+  - export/post-processing fixes landed
+
+## v2.1 Baseline - MYSTRAN Post-Processing (F06)
 
 - Added **Analysis Results (MYSTRAN only)** workflow in Inspect mode.
 - Added F06 parsing for:
@@ -23,94 +77,6 @@ WebMesh Editor is a single-file, browser-based Nastran deck viewer/editor for `.
   - viewport-anchored legend
   - manual text-size control
   - per-level tick labels matching contour formatting
-
-## Major Upgrades Since v1.0.00
-
-### 1) UI/UX Re-architecture
-- Replaced the long-scroll sidebar workflow with static left-lane menus and viewport flyout panels.
-- Added full Inspect/Create/Modify flyout flows with lock/unlock behavior.
-- Added layout controls to hide/show left sidebar, right sidebar, and status dock.
-- Reduced nested scroll behavior and improved panel density/readability.
-- Added dedicated `Material` lane in create/modify workflows.
-
-### 2) File Ingest + INCLUDE Resolution
-- Added multi-file and folder loading paths for model + dependency ingestion.
-- Added entry-deck chooser when multiple candidate `.dat/.bdf` files are found.
-- Added INCLUDE-aware loading with virtual file system (VFS) handling.
-- Added support for nested INCLUDEs and multiline INCLUDE path parsing.
-- Added path-resolution fallback behavior for root/subfolder deck layouts.
-- Added include-depth protection and clearer status feedback for include failures.
-
-### 3) Schema Card Engine (Create + Modify)
-- Replaced hardcoded create/modify forms with schema-driven field rendering.
-- Added field-tier behavior (`Required`, `Recommended`, `Advanced`) and advanced-toggle control.
-- Added card-category filtering so each menu shows relevant cards only.
-- Modify path now applies targeted field updates (surgical edit behavior) instead of blanket delete/recreate.
-
-### 4) Expanded End-to-End Card Support
-- Parse/hydrate/edit/write coverage expanded across core card families, including:
-  - `GRID`, `CORD1R/C`, `CORD2R/C/S`
-  - `CTRIA3`, `CQUAD4`, `CTETRA`, `CHEXA`, `CPENTA`, `CPYRAM`
-  - `CROD`, `CBAR`, `CBEAM`, `CBUSH`, `RBE2`, `RBE3`
-  - `PSHELL`, `PSOLID`, `PROD`, `PBAR`, `PBEAM`, `PBUSH`, `PCOMP`, `MAT1`
-  - `FORCE`, `MOMENT`, `LOAD`, `PLOAD2`, `PLOAD4`, `SPC`, `SPC1`, `CONM2`
-
-### 5) Selection Tool Overhaul
-- Unified selection manager across entities: nodes/elements/loads/constraints/properties.
-- Added selection methods for element workflows: by normal, by face, by element type.
-- Added operation modes: replace, add, remove, intersect.
-- Added range/list apply modes with selection copy/paste support.
-- Added selection transforms:
-  - nodes-from-elements
-  - elements-from-nodes
-  - select-elements-by-property
-- Improved selection-state stability (including Alt+drag teardown paths).
-
-### 6) Model Tree + Context Menu Upgrades
-- Model tree now supports richer type-group interaction and capped ID expansion.
-- Hovering IDs can preview entities in the viewport.
-- Right-click menu supports more consistent edit and delete operations.
-- Improved entity routing for context actions (elements, properties, loads, constraints).
-
-### 7) Spreadsheet/CSV Data Exchange
-- Added Excel-friendly **Schema CSV** import/export for selected card data.
-- Added CSV workflows for selected node data updates.
-- Added Nastran card-token CSV import/export paths for controlled bulk edits.
-- CSV flows preserve card identity (`card + id`) and support upsert behavior.
-
-### 8) Large-Input Card Editors
-- Added PCOMP layup table editing (row-based ply workflows).
-- Added RBE large-node-list editing with append/replace/remove operations.
-- Added bulk target-grid workflows for load/constraint card creation.
-
-### 9) Transform and Utilities
-- Split transform workflows into dedicated tools:
-  - Linear Transform
-  - Radial Transform
-  - Reflect
-  - Utilities
-- Improved transform behavior for non-global coordinate-system cases.
-- Expanded copy/reflect behavior across shells, solids, 1D elements, and rigid elements.
-
-### 10) Visualization + Display Improvements
-- Added/updated 1D center glyphs:
-  - `CBUSH` spring glyph
-  - `CROD` circle glyph
-  - `CBAR` square glyph
-  - `CBEAM` I-section glyph
-- Improved property-driven element-face highlighting.
-- Fixed UI/label layering so flyouts and labels render correctly.
-- Made symbol/glyph size behavior viewport-relative for zoom stability.
-- Updated default visual baseline tuning for symbol and spring size controls.
-
-### 11) Export/Format Reliability
-- Improved deterministic short/long/free format handling.
-- Improved continuation handling and semantic-preserving export for supported cards.
-- Reduced semantic drift in blank/default-sensitive fields (notably PCOMP workflows).
-
-### 12) Sample and Distribution Behavior
-- Updated the embedded sample model used by `Load sample`.
-- Distribution remains single-file and offline-friendly.
 
 ## Controls
 
