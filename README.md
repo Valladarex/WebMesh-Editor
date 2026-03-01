@@ -1,60 +1,42 @@
-﻿# WebMesh Editor v2.2
+# WebMesh Editor v2.2
 
 WebMesh Editor is a single-file, browser-based Nastran deck viewer/editor for `.dat` and `.bdf` models.
 
-## New in v2.2 - Changes Since v2.1
+## New in v2.2
 
-### 1) Large-Model Performance Recovery and Architecture Cleanup
-- Reworked the large-model path around the forced SoA/core payload direction so small and large models stay on the same architecture.
-- Added M8 baseline capture, forensic reporting, and deterministic regression coverage for render, coordinate, and clipping failures.
-- Restored full filled-surface rendering for large decks instead of partial/wireframe-only behavior.
-- Reduced large-model interaction cost by moving more truth to worker/core payload data and tightening main-thread selection/render paths.
-- Added targeted regressions for:
-  - coordinate truth (`tests/test_m8_p1_coord_contract.mjs`)
-  - large render parity (`tests/test_m8_p2_render_parity.mjs`)
-  - clipping/pick/select behavior (`tests/test_m8_p3_clip_selection.mjs`)
+### Large model improvements
+- Large models now render as full shaded geometry again instead of falling back to widespread wireframe-only display.
+- Large-model navigation and interaction are much smoother than in the late `v2.1` builds.
+- Selection tools now behave much better on large models, including box select, polygon select, and `Show only`.
 
-### 2) Clipping, Pick-Front, and Selection Fidelity
-- Rebuilt clip-active element picking so visible front faces win instead of clipped-away/internal geometry.
-- Restored box select, polygon select, `Show only`, and selected-subset rendering on the large model path.
-- Fixed clipped selection so hidden entities behind the clipping plane no longer win point picks.
-- Added front-visible node picking behavior so node picks stay aligned with what the user can actually see.
-- Fixed clipping-plane UI and control issues:
-  - actual default plane now matches the UI selector
-  - numeric offset display is normalized to `.001`
-  - numeric spinner arrows move in `0.1` increments
+### Clipping and picking
+- Clipping-plane selection now follows what is actually visible to the user.
+- `Pick front` behavior is improved so visible faces and nodes win instead of hidden geometry behind them.
+- Clipping controls are more reliable and easier to use, including manual offset entry.
 
-### 3) Viewport and Visual Fidelity Fixes
-- Models now frame correctly on load/reset instead of opening off-screen or at unusable targets.
-- 1D glyphs now respect depth occlusion instead of drawing through front geometry.
-- Fixed glyph and clipping-plane viewport inconsistencies that made the scene look wrong even when geometry was correct.
-- Added skybox support and related display controls.
+### Display and viewport fixes
+- Models frame correctly on load and reset instead of opening off-screen or at unusable positions.
+- Glyphs now respect front geometry instead of drawing through the model.
+- Labels, clipping, and viewport behavior are more consistent than in `v2.1`.
+- Skybox support has been added.
 
-### 4) Coordinate-System and Geometry Corrections
-- Restored nested/local coordinate-system parity using explicit global node positions in the core payload.
-- Fixed render-time coordinate resolution so local-coordinate nodes land in the correct global positions again.
-- Corrected preserve-view geometry behavior after regressions in post-crash recovery work.
+### Coordinate and geometry fixes
+- Nested and local coordinate-system rendering regressions from the `v2.1` upgrade work were corrected.
+- Geometry placement is now more consistent between small and large models.
 
-### 5) Post-Processing and Export Fixes
-- Fixed MYSTRAN/F06 output handling beyond the original v2.1 release.
+### Post-processing
 - Enabled support for STRESS, FORCE, GPFORCES, MPCFORCES, OLOAD, STRAIN
-- Fixed `.dat` export behavior after the v2.1 release.
-- Continued tightening deterministic export/roundtrip behavior while preserving the single-file offline workflow.
+- Improved F06/MYSTRAN post-processing support beyond the original `v2.1` release.
+- Export behavior is more reliable than in the later `v2.1` builds.
 
-### 6) Reliability, Guardrails, and Auditability
-- Hardened the read-gate proof system with signed metadata, freshness checks, similarity checks, and dedicated tests.
-- Added post-crash audit, remediation, and performance forensic documentation so major regressions are tracked with evidence.
-- Added watchdog and artifact-check tooling for long-running M8 performance work.
-
-### 7) Release Scope Summary
-- v2.2 is primarily a stability, performance, and interaction-fidelity release on top of v2.1.
-- The biggest user-visible upgrades since v2.1 are:
-  - large-model filled rendering restored
-  - clipping and front-pick behavior fixed
-  - coordinate-system regressions corrected
-  - viewport framing and glyph occlusion fixed
-  - skybox support added
-  - export/post-processing fixes landed
+### Summary
+- `v2.2` is mainly a stability, usability, and large-model recovery release.
+- The biggest end-user changes are:
+  - better large-model rendering
+  - better clipping and pick behavior
+  - corrected coordinate-system behavior
+  - better framing/reset behavior
+  - improved post-processing support
 
 ## v2.1 Baseline - MYSTRAN Post-Processing (F06)
 
